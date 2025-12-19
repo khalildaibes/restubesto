@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import Image from 'next/image'
+import { StrapiImage } from '@/shared/components/ui/StrapiImage'
 import type { Banner } from '@/types/domain'
 import type { Language } from '@/types/i18n'
 import { getText } from '@/shared/utils/i18n'
@@ -19,16 +19,12 @@ export function BannerSlide({ banner, language }: BannerSlideProps) {
       className="absolute inset-0"
     >
       {banner.imageUrl && banner.imageUrl.trim() ? (
-        <Image
+        <StrapiImage
           src={banner.imageUrl}
           alt={getText(banner.title, language)}
           fill
           className="object-cover"
           priority
-          unoptimized={banner.imageUrl.startsWith('http://')}
-          onError={(e) => {
-            console.error(`Failed to load banner image:`, banner.imageUrl)
-          }}
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300" />

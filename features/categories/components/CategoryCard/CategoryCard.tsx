@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import Image from 'next/image'
+import { StrapiImage } from '@/shared/components/ui/StrapiImage'
 import type { Category } from '@/types/domain'
 import { getText } from '@/shared/utils/i18n'
 import { useLanguageStore } from '@/stores/language'
@@ -34,15 +34,11 @@ export function CategoryCard({ category, index }: CategoryCardProps) {
           className="relative h-48 rounded-2xl overflow-hidden bg-gray-100 cursor-pointer"
         >
           {category.imageUrl && category.imageUrl.trim() ? (
-            <Image
+            <StrapiImage
               src={category.imageUrl}
               alt={getText(category.name, language)}
               fill
               className="object-cover"
-              unoptimized={category.imageUrl.startsWith('http://')}
-              onError={(e) => {
-                console.error(`Failed to load image for category ${category.slug}:`, category.imageUrl)
-              }}
             />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300" />
