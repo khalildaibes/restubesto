@@ -10,8 +10,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const locale = searchParams.get('locale') || 'en'
     
+    // Validate locale (en, he, ar)
+    const validLocales = ['en', 'he', 'ar']
+    const finalLocale = validLocales.includes(locale) ? locale : 'en'
+    
     const params: Record<string, string> = {
-      locale,
+      locale: finalLocale,
       'populate[image]': '*',
       'filters[isActive][$eq]': 'true',
       sort: 'order:asc',

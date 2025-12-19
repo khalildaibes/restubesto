@@ -65,15 +65,30 @@ function getImageUrl(imageData: any, imageUrlField?: string): string {
   const url = extractUrl(imageData)
   
   if (url) {
+    let finalUrl: string
+    
     // If URL is already absolute
     if (url.startsWith('http://') || url.startsWith('https://')) {
       // Ensure Strapi URLs use HTTP (not HTTPS) for production compatibility
-      return ensureHttpUrl(url)
+      finalUrl = ensureHttpUrl(url)
+    } else {
+      // Handle relative URLs - prepend Strapi URL (always use HTTP)
+      // Strapi usually returns URLs starting with /uploads/...
+      const fullUrl = `${STRAPI_URL}${url.startsWith('/') ? url : '/' + url}`
+      finalUrl = ensureHttpUrl(fullUrl)
     }
-    // Handle relative URLs - prepend Strapi URL (always use HTTP)
-    // Strapi usually returns URLs starting with /uploads/...
-    const fullUrl = `${STRAPI_URL}${url.startsWith('/') ? url : '/' + url}`
-    return ensureHttpUrl(fullUrl)
+    
+    // Log in browser console (client-side only)
+    if (typeof window !== 'undefined') {
+      console.log('🖼️ Image URL extracted:', {
+        originalUrl: url,
+        finalUrl,
+        imageData: imageData ? Object.keys(imageData) : null,
+        imageUrlField,
+      })
+    }
+    
+    return finalUrl
   }
 
   // Check if imageData is a number (ID reference without populate)
@@ -92,9 +107,10 @@ function getImageUrl(imageData: any, imageUrlField?: string): string {
 export function transformCategory(strapiCategory: any, locale: string = 'en'): Category {
   const attrs = strapiCategory.attributes || strapiCategory
   
-  // For multilingual fields, Strapi returns the current locale's value
-  // We set the current locale's value and leave others empty for now
-  // TODO: Enhance to fetch all locales and merge them
+  // Strapi i18n returns data for the requested locale
+  // When locale=ar, Strapi returns Arabic content; when locale=he, it returns Hebrew, etc.
+  // We populate the current locale's value and leave others empty
+  // The frontend will use getText() to extract the correct language
   const name: MultilingualText = {
     en: locale === 'en' ? (attrs.name || '') : '',
     he: locale === 'he' ? (attrs.name || '') : '',
@@ -116,14 +132,34 @@ export function transformCategory(strapiCategory: any, locale: string = 'en'): C
     imageUrl = typeof attrs.imageUrl === 'string' ? attrs.imageUrl.trim() : ''
   }
   
-  // Debug logging with more details to understand the structure
-  if (!imageUrl && process.env.NODE_ENV === 'development' && attrs.image) {
-    // Log the full image structure to understand what Strapi is returning
-    console.log(`Category ${attrs.slug || attrs.name} image structure:`, {
-      imageType: typeof attrs.image,
-      imageKeys: attrs.image ? Object.keys(attrs.image) : [],
-      imageData: attrs.image,
-    })
+  // Log image URL extraction (client-side only)
+  if (typeof window !== 'undefined') {
+    if (imageUrl) {
+      console.log('✅ Category image URL extracted:', {
+        category: attrs.slug || attrs.name,
+        locale,
+        imageUrl,
+        hasImageData: !!attrs.image,
+        hasImageUrlField: !!attrs.imageUrl,
+      })
+    } else {
+      console.warn('⚠️ Category has no image URL:', {
+        category: attrs.slug || attrs.name,
+        locale,
+        hasImageData: !!attrs.image,
+        hasImageUrlField: !!attrs.imageUrl,
+        imageData: attrs.image ? {
+          type: typeof attrs.image,
+          keys: Object.keys(attrs.image),
+          data: attrs.image.data ? {
+            type: typeof attrs.image.data,
+            isArray: Array.isArray(attrs.image.data),
+            length: Array.isArray(attrs.image.data) ? attrs.image.data.length : null,
+            firstItem: Array.isArray(attrs.image.data) && attrs.image.data[0] ? Object.keys(attrs.image.data[0]) : null,
+          } : null,
+        } : null,
+      })
+    }
   }
 
   return {
@@ -141,6 +177,8 @@ export function transformCategory(strapiCategory: any, locale: string = 'en'): C
 export function transformMeal(strapiMeal: any, locale: string = 'en'): Meal {
   const attrs = strapiMeal.attributes || strapiMeal
   
+  // Strapi i18n returns data for the requested locale
+  // When locale=ar, Strapi returns Arabic content; when locale=he, it returns Hebrew, etc.
   const name: MultilingualText = {
     en: locale === 'en' ? (attrs.name || '') : '',
     he: locale === 'he' ? (attrs.name || '') : '',
@@ -179,14 +217,28 @@ export function transformMeal(strapiMeal: any, locale: string = 'en'): Meal {
     imageUrl = typeof attrs.imageUrl === 'string' ? attrs.imageUrl.trim() : ''
   }
   
-  // Debug logging with more details to understand the structure
-  if (!imageUrl && process.env.NODE_ENV === 'development' && attrs.image) {
-    // Log the full image structure to understand what Strapi is returning
-    console.log(`Meal ${attrs.name || strapiMeal.id} image structure:`, {
-      imageType: typeof attrs.image,
-      imageKeys: attrs.image ? Object.keys(attrs.image) : [],
-      imageData: attrs.image,
-    })
+  // Log image URL extraction (client-side only)
+  if (typeof window !== 'undefined') {
+    if (imageUrl) {
+      console.log('✅ Meal image URL extracted:', {
+        meal: attrs.name || strapiMeal.id,
+        locale,
+        imageUrl,
+        hasImageData: !!attrs.image,
+        hasImageUrlField: !!attrs.imageUrl,
+      })
+    } else {
+      console.warn('⚠️ Meal has no image URL:', {
+        meal: attrs.name || strapiMeal.id,
+        locale,
+        hasImageData: !!attrs.image,
+        hasImageUrlField: !!attrs.imageUrl,
+        imageData: attrs.image ? {
+          type: typeof attrs.image,
+          keys: Object.keys(attrs.image),
+        } : null,
+      })
+    }
   }
 
   return {

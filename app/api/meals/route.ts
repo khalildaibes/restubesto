@@ -11,12 +11,16 @@ export async function GET(request: NextRequest) {
     const locale = searchParams.get('locale') || 'en'
     const categorySlug = searchParams.get('category')
     
+    // Validate locale (en, he, ar)
+    const validLocales = ['en', 'he', 'ar']
+    const finalLocale = validLocales.includes(locale) ? locale : 'en'
+    
     // Build query parameters
     // Only populate fields that exist in Strapi
     // Note: defaultIngredients and optionalIngredients are not populated
     // because they may not exist as relations in your Strapi schema
     const params: Record<string, string> = {
-      locale,
+      locale: finalLocale,
       'populate[category][populate]': '*',
       'populate[tags][populate]': '*',
       'populate[image]': '*',
