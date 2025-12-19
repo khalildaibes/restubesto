@@ -28,13 +28,23 @@ export function MealCard({ meal, onClick, index }: MealCardProps) {
         onClick={onClick}
         className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow"
       >
-        <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
-          <Image
-            src={meal.imageUrl}
-            alt={getText(meal.name, language)}
-            fill
-            className="object-cover"
-          />
+        <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+          {meal.imageUrl && meal.imageUrl.trim() ? (
+            <Image
+              src={meal.imageUrl}
+              alt={getText(meal.name, language)}
+              fill
+              className="object-cover"
+              unoptimized={meal.imageUrl.startsWith('http://')}
+              onError={(e) => {
+                console.error(`Failed to load image for meal ${meal.id}:`, meal.imageUrl)
+              }}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+              <span className="text-gray-400 text-xs">No Image</span>
+            </div>
+          )}
         </div>
         <MealCardContent meal={meal} language={language} />
       </motion.button>

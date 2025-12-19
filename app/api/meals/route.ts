@@ -13,18 +13,14 @@ export async function GET(request: NextRequest) {
     
     // Build query parameters
     // Only populate fields that exist in Strapi
-    // Note: defaultIngredients and optionalIngredients might not exist as relations
+    // Note: defaultIngredients and optionalIngredients are not populated
+    // because they may not exist as relations in your Strapi schema
     const params: Record<string, string> = {
       locale,
       'populate[category][populate]': '*',
       'populate[tags][populate]': '*',
       'populate[image]': '*',
     }
-    
-    // Only add ingredient populates if they exist in your Strapi schema
-    // Uncomment these if you have ingredient relations set up:
-    // 'populate[defaultIngredients][populate]': '*',
-    // 'populate[optionalIngredients][populate]': '*',
 
     // Add category filter if provided
     if (categorySlug) {

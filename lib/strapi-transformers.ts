@@ -18,28 +18,52 @@ function getImageUrl(imageData: any, imageUrlField?: string): string {
     return imageUrlField.trim()
   }
 
-  // Then check for Strapi media field structure
-  if (imageData?.data?.attributes?.url) {
-    const url = imageData.data.attributes.url
-    // If URL is already absolute, return it; otherwise prepend STRAPI_URL
-    if (url.startsWith('http')) {
-      return url
-    }
-    return `${STRAPI_URL}${url}`
+  // If no imageData, return empty
+  if (!imageData) {
+    return ''
   }
 
-  // Check for alternative Strapi media structures
-  if (imageData?.attributes?.url) {
-    const url = imageData.attributes.url
-    if (url.startsWith('http')) {
-      return url
+  // Helper function to extract URL from various structures
+  const extractUrl = (data: any): string | null => {
+    // Check for data.attributes.url (most common Strapi structure)
+    if (data?.data?.attributes?.url) {
+      return data.data.attributes.url
     }
-    return `${STRAPI_URL}${url}`
+    // Check for data[0].attributes.url (array structure)
+    if (Array.isArray(data?.data) && data.data.length > 0 && data.data[0]?.attributes?.url) {
+      return data.data[0].attributes.url
+    }
+    // Check for attributes.url (direct attributes)
+    if (data?.attributes?.url) {
+      return data.attributes.url
+    }
+    // Check for direct url property
+    if (data?.url) {
+      return data.url
+    }
+    // Check if data itself is the URL string
+    if (typeof data === 'string' && data.trim()) {
+      return data.trim()
+    }
+    return null
   }
 
-  // Check if imageData itself is a string URL
-  if (typeof imageData === 'string' && imageData.trim()) {
-    return imageData.trim()
+  const url = extractUrl(imageData)
+  
+  if (url) {
+    // If URL is already absolute, return it
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url
+    }
+    // Handle relative URLs - prepend Strapi URL
+    // Strapi usually returns URLs starting with /uploads/...
+    return `${STRAPI_URL}${url.startsWith('/') ? url : '/' + url}`
+  }
+
+  // Check if imageData is a number (ID reference without populate)
+  if (typeof imageData === 'number') {
+    // This means image wasn't populated, return empty
+    return ''
   }
 
   // Fallback: return empty string
@@ -76,14 +100,13 @@ export function transformCategory(strapiCategory: any, locale: string = 'en'): C
     imageUrl = typeof attrs.imageUrl === 'string' ? attrs.imageUrl.trim() : ''
   }
   
-  // Debug logging (can be removed in production)
-  if (!imageUrl && process.env.NODE_ENV === 'development') {
-    console.warn(`Category ${attrs.slug || attrs.name} has no imageUrl:`, {
-      hasImage: !!attrs.image,
-      hasImageUrl: !!attrs.imageUrl,
+  // Debug logging with more details to understand the structure
+  if (!imageUrl && process.env.NODE_ENV === 'development' && attrs.image) {
+    // Log the full image structure to understand what Strapi is returning
+    console.log(`Category ${attrs.slug || attrs.name} image structure:`, {
+      imageType: typeof attrs.image,
+      imageKeys: attrs.image ? Object.keys(attrs.image) : [],
       imageData: attrs.image,
-      imageUrlField: attrs.imageUrl,
-      allAttrs: Object.keys(attrs),
     })
   }
 
@@ -132,13 +155,31 @@ export function transformMeal(strapiMeal: any, locale: string = 'en'): Meal {
     })
   }
 
+  // Get image URL - check multiple possible fields
+  let imageUrl = getImageUrl(attrs.image, attrs.imageUrl)
+  
+  // If still no imageUrl, try to get it from the raw attributes
+  if (!imageUrl && attrs.imageUrl) {
+    imageUrl = typeof attrs.imageUrl === 'string' ? attrs.imageUrl.trim() : ''
+  }
+  
+  // Debug logging with more details to understand the structure
+  if (!imageUrl && process.env.NODE_ENV === 'development' && attrs.image) {
+    // Log the full image structure to understand what Strapi is returning
+    console.log(`Meal ${attrs.name || strapiMeal.id} image structure:`, {
+      imageType: typeof attrs.image,
+      imageKeys: attrs.image ? Object.keys(attrs.image) : [],
+      imageData: attrs.image,
+    })
+  }
+
   return {
     id: String(strapiMeal.id),
     categorySlug,
     name,
     description,
     price: attrs.price || 0,
-    imageUrl: getImageUrl(attrs.image, attrs.imageUrl),
+    imageUrl,
     calories: attrs.calories || undefined,
     tags: tags.length > 0 ? tags : undefined,
     // Ingredients would be transformed similarly if needed

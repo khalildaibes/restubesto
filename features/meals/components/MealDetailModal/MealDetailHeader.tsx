@@ -19,13 +19,23 @@ export function MealDetailHeader({
   const { language } = useLanguageStore()
 
   return (
-    <div className="relative h-64 w-full">
-      <Image
-        src={meal.imageUrl}
-        alt={getText(meal.name, language)}
-        fill
-        className="object-cover"
-      />
+    <div className="relative h-64 w-full bg-gray-100">
+      {meal.imageUrl && meal.imageUrl.trim() ? (
+        <Image
+          src={meal.imageUrl}
+          alt={getText(meal.name, language)}
+          fill
+          className="object-cover"
+          unoptimized={meal.imageUrl.startsWith('http://')}
+          onError={(e) => {
+            console.error(`Failed to load image for meal ${meal.id}:`, meal.imageUrl)
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+          <span className="text-gray-400">No Image</span>
+        </div>
+      )}
       <IconButton
         onClick={onClose}
         aria-label="Close"
