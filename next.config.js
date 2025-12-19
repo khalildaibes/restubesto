@@ -16,6 +16,9 @@ const nextConfig = {
         port: '1337',
       },
     ],
+    // Allow unoptimized images for HTTP sources (required for production)
+    // This prevents Next.js from trying to optimize HTTP images which can cause issues
+    unoptimized: false,
   },
 }
 

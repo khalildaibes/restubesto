@@ -9,13 +9,27 @@ import type { Banner } from '@/types/domain/Banner'
 import type { MultilingualText } from '@/types/domain/MultilingualText'
 
 /**
+ * Ensure image URL uses HTTP (not HTTPS) for Strapi URLs
+ * This is important for production where the site might be HTTPS but Strapi is HTTP
+ */
+function ensureHttpUrl(url: string): string {
+  // If it's a Strapi URL and uses HTTPS, convert to HTTP
+  const strapiHost = STRAPI_URL.replace('http://', '').replace('https://', '')
+  if (url.includes(strapiHost)) {
+    return url.replace('https://', 'http://')
+  }
+  return url
+}
+
+/**
  * Get image URL from Strapi image data structure
  * Handles both media field (image.data.attributes.url) and text field (imageUrl)
  */
 function getImageUrl(imageData: any, imageUrlField?: string): string {
   // First check if imageUrl is provided as a direct field (from populate script)
   if (imageUrlField && typeof imageUrlField === 'string' && imageUrlField.trim()) {
-    return imageUrlField.trim()
+    // Ensure Strapi URLs use HTTP
+    return ensureHttpUrl(imageUrlField.trim())
   }
 
   // If no imageData, return empty
@@ -51,13 +65,15 @@ function getImageUrl(imageData: any, imageUrlField?: string): string {
   const url = extractUrl(imageData)
   
   if (url) {
-    // If URL is already absolute, return it
+    // If URL is already absolute
     if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url
+      // Ensure Strapi URLs use HTTP (not HTTPS) for production compatibility
+      return ensureHttpUrl(url)
     }
-    // Handle relative URLs - prepend Strapi URL
+    // Handle relative URLs - prepend Strapi URL (always use HTTP)
     // Strapi usually returns URLs starting with /uploads/...
-    return `${STRAPI_URL}${url.startsWith('/') ? url : '/' + url}`
+    const fullUrl = `${STRAPI_URL}${url.startsWith('/') ? url : '/' + url}`
+    return ensureHttpUrl(fullUrl)
   }
 
   // Check if imageData is a number (ID reference without populate)
