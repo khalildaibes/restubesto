@@ -5,7 +5,7 @@ import { getText } from '@/shared/utils/i18n'
 import { useLanguageStore } from '@/stores/language'
 import { useTranslations } from '@/shared/i18n'
 import { CheckIcon } from '@/shared/components/ui/CheckIcon'
-import { useSelectedIngredients } from './MealIngredients'
+import { useSelectedIngredients } from './SelectedIngredientsProvider'
 
 interface OptionalIngredientsListProps {
   ingredients: Ingredient[]

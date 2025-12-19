@@ -8,7 +8,7 @@ import { useLanguageStore } from '@/stores/language'
 import { useTranslations } from '@/shared/i18n'
 import { Button } from '@/shared/components/ui/Button'
 import { useMealQuantity } from './MealQuantityProvider'
-import { useSelectedIngredients } from './MealIngredients'
+import { useSelectedIngredients } from './SelectedIngredientsProvider'
 
 interface MealDetailFooterProps {
   meal: Meal
