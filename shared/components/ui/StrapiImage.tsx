@@ -30,6 +30,7 @@ export function StrapiImage({
   const [loaded, setLoaded] = useState(false)
   const isHttp = src.startsWith('http://')
   const isStrapiUrl = src.includes('142.93.172.35')
+  const isProxyUrl = src.startsWith('/api/images/')
 
   // Log image loading attempt
   useEffect(() => {
@@ -38,11 +39,17 @@ export function StrapiImage({
       alt,
       isHttp,
       isStrapiUrl,
+      isProxyUrl,
       fill,
       width,
       height,
+      protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown',
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+      isProduction: typeof window !== 'undefined' && 
+                    window.location.hostname !== 'localhost' && 
+                    !window.location.hostname.includes('127.0.0.1'),
     })
-  }, [src, alt, isHttp, isStrapiUrl, fill, width, height])
+  }, [src, alt, isHttp, isStrapiUrl, isProxyUrl, fill, width, height])
 
   const handleLoad = () => {
     setLoaded(true)
@@ -57,24 +64,31 @@ export function StrapiImage({
       error: e,
       isHttp,
       isStrapiUrl,
+      isProxyUrl,
       imageElement: e.target,
+      currentProtocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown',
     })
     
     // Try to diagnose the issue
-    if (isHttp && isStrapiUrl) {
-      console.warn('🔍 Image Debug Info:', {
+    if (isHttp && isStrapiUrl && !isProxyUrl) {
+      console.warn('🔍 Image Debug Info - Direct HTTP URL:', {
         url: src,
-        protocol: new URL(src).protocol,
-        hostname: new URL(src).hostname,
-        pathname: new URL(src).pathname,
-        fullUrl: src,
-        suggestion: 'Check if Strapi server is accessible and CORS is configured',
+        protocol: (() => {
+          try { return new URL(src).protocol } catch { return 'invalid' }
+        })(),
+        suggestion: 'This might be blocked due to mixed content. Consider using image proxy.',
+      })
+    } else if (isProxyUrl) {
+      console.warn('🔍 Image Debug Info - Proxy URL:', {
+        url: src,
+        suggestion: 'Check if /api/images route is working correctly',
       })
     }
   }
 
-  // For HTTP Strapi images, use regular img tag to avoid mixed content issues
-  if (isHttp && isStrapiUrl) {
+  // For proxy URLs or HTTP Strapi images, use regular img tag
+  // Proxy URLs are served through Next.js API route, so they're same-origin
+  if (isProxyUrl || (isHttp && isStrapiUrl)) {
     if (fill) {
       return (
         <img

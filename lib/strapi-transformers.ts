@@ -9,14 +9,38 @@ import type { Banner } from '@/types/domain/Banner'
 import type { MultilingualText } from '@/types/domain/MultilingualText'
 
 /**
- * Ensure image URL uses HTTP (not HTTPS) for Strapi URLs
- * This is important for production where the site might be HTTPS but Strapi is HTTP
+ * Convert Strapi image URL to use Next.js image proxy
+ * This avoids mixed content issues (HTTPS site loading HTTP images)
+ * Always use proxy for Strapi images to ensure compatibility in production
  */
 function ensureHttpUrl(url: string): string {
-  // If it's a Strapi URL and uses HTTPS, convert to HTTP
   const strapiHost = STRAPI_URL.replace('http://', '').replace('https://', '')
+  
   if (url.includes(strapiHost)) {
-    return url.replace('https://', 'http://')
+    // Always convert HTTPS to HTTP for Strapi URLs first
+    url = url.replace('https://', 'http://')
+    
+    // Always use proxy for Strapi images to avoid mixed content issues
+    // This works in both dev and production
+    try {
+      const urlObj = new URL(url)
+      const path = urlObj.pathname
+      // Remove leading slash if present
+      const cleanPath = path.startsWith('/') ? path.slice(1) : path
+      // Return proxy URL - this will be served through Next.js API route
+      const proxyUrl = `/api/images/${cleanPath}`
+      
+      // Log in browser console (client-side only)
+      if (typeof window !== 'undefined') {
+        console.log('🔄 Using image proxy:', { original: url, proxy: proxyUrl })
+      }
+      
+      return proxyUrl
+    } catch (e) {
+      // If URL parsing fails, return HTTP version as fallback
+      console.warn('⚠️ Failed to create proxy URL, using direct URL:', e)
+      return url
+    }
   }
   return url
 }

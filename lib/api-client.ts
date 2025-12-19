@@ -5,11 +5,13 @@
 import type { Category } from '@/types/domain/Category'
 import type { Meal } from '@/types/domain/Meal'
 import type { Banner } from '@/types/domain/Banner'
+import type { Language } from '@/types/i18n'
 import {
   transformCategories,
   transformMeals,
   transformBanners,
 } from './strapi-transformers'
+import { getText } from '@/shared/utils/i18n/getText'
 import { categories as mockCategories } from '@/data/mock/categories'
 import { meals as mockMeals } from '@/data/mock/meals'
 import { banners as mockBanners } from '@/data/mock/banners'
@@ -104,7 +106,7 @@ export async function fetchMeals(
       locale,
       categorySlug,
       count: transformed.length,
-      meals: transformed.map(m => ({ id: m.id, name: m.name[locale], hasImage: !!m.imageUrl })),
+      meals: transformed.map(m => ({ id: m.id, name: getText(m.name, locale as Language), hasImage: !!m.imageUrl })),
     })
     
     // If transformation resulted in empty array, use mock data
