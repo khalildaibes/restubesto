@@ -15,7 +15,7 @@ import type { MultilingualText } from '@/types/domain/MultilingualText'
 function getImageUrl(imageData: any, imageUrlField?: string): string {
   // First check if imageUrl is provided as a direct field (from populate script)
   if (imageUrlField && typeof imageUrlField === 'string' && imageUrlField.trim()) {
-    return imageUrlField
+    return imageUrlField.trim()
   }
 
   // Then check for Strapi media field structure
@@ -37,7 +37,12 @@ function getImageUrl(imageData: any, imageUrlField?: string): string {
     return `${STRAPI_URL}${url}`
   }
 
-  // Fallback: return empty string or placeholder
+  // Check if imageData itself is a string URL
+  if (typeof imageData === 'string' && imageData.trim()) {
+    return imageData.trim()
+  }
+
+  // Fallback: return empty string
   return ''
 }
 
@@ -62,12 +67,32 @@ export function transformCategory(strapiCategory: any, locale: string = 'en'): C
     ar: locale === 'ar' ? (attrs.description || '') : '',
   }
 
+  // Get image URL - check multiple possible fields
+  // Check imageUrl field first (from populate script), then image media field
+  let imageUrl = getImageUrl(attrs.image, attrs.imageUrl)
+  
+  // If still no imageUrl, try to get it from the raw attributes
+  if (!imageUrl && attrs.imageUrl) {
+    imageUrl = typeof attrs.imageUrl === 'string' ? attrs.imageUrl.trim() : ''
+  }
+  
+  // Debug logging (can be removed in production)
+  if (!imageUrl && process.env.NODE_ENV === 'development') {
+    console.warn(`Category ${attrs.slug || attrs.name} has no imageUrl:`, {
+      hasImage: !!attrs.image,
+      hasImageUrl: !!attrs.imageUrl,
+      imageData: attrs.image,
+      imageUrlField: attrs.imageUrl,
+      allAttrs: Object.keys(attrs),
+    })
+  }
+
   return {
     id: String(strapiCategory.id),
     slug: attrs.slug || '',
     name,
     description,
-    imageUrl: getImageUrl(attrs.image, attrs.imageUrl),
+    imageUrl,
   }
 }
 

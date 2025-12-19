@@ -7,7 +7,7 @@ import { getText } from '@/shared/utils/i18n'
 import { useLanguageStore } from '@/stores/language'
 import { useTranslations } from '@/shared/i18n'
 import { Button } from '@/shared/components/ui/Button'
-import { useMealQuantity } from './MealQuantitySelector'
+import { useMealQuantity } from './MealQuantityProvider'
 import { useSelectedIngredients } from './MealIngredients'
 
 interface MealDetailFooterProps {

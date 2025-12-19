@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { STRAPI_URL, fetchFromStrapi, getStrapiHeaders } from '@/lib/strapi'
 
+// Mark this route as dynamic
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export interface OrderItem {
   mealId: string
   mealName: string

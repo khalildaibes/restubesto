@@ -16,6 +16,11 @@ interface CategoryCardProps {
 export function CategoryCard({ category, index }: CategoryCardProps) {
   const { language } = useLanguageStore()
 
+  // Debug: Log image URL in development
+  if (process.env.NODE_ENV === 'development' && !category.imageUrl) {
+    console.warn(`Category ${category.slug} has no imageUrl:`, category)
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -28,12 +33,20 @@ export function CategoryCard({ category, index }: CategoryCardProps) {
           whileTap={{ scale: 0.98 }}
           className="relative h-48 rounded-2xl overflow-hidden bg-gray-100 cursor-pointer"
         >
-          <Image
-            src={category.imageUrl}
-            alt={getText(category.name, language)}
-            fill
-            className="object-cover"
-          />
+          {category.imageUrl && category.imageUrl.trim() ? (
+            <Image
+              src={category.imageUrl}
+              alt={getText(category.name, language)}
+              fill
+              className="object-cover"
+              unoptimized={category.imageUrl.startsWith('http://')}
+              onError={(e) => {
+                console.error(`Failed to load image for category ${category.slug}:`, category.imageUrl)
+              }}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300" />
+          )}
           <CategoryCardContent category={category} language={language} />
         </motion.div>
       </Link>

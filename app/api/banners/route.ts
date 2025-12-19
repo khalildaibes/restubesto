@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchFromStrapi } from '@/lib/strapi'
 
+// Mark this route as dynamic
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -19,10 +23,16 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(data, { status: 200 })
   } catch (error) {
-    console.error('Error fetching banners:', error)
+    console.error('Error fetching banners from Strapi:', error)
+    
+    // Return empty data structure instead of error
     return NextResponse.json(
-      { error: 'Failed to fetch banners', message: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { 
+        data: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+        meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } }
+      },
+      { status: 200 }
     )
   }
 }

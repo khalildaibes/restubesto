@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchFromStrapi } from '@/lib/strapi'
 
+// Mark this route as dynamic
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -8,14 +12,19 @@ export async function GET(request: NextRequest) {
     const categorySlug = searchParams.get('category')
     
     // Build query parameters
+    // Only populate fields that exist in Strapi
+    // Note: defaultIngredients and optionalIngredients might not exist as relations
     const params: Record<string, string> = {
       locale,
       'populate[category][populate]': '*',
       'populate[tags][populate]': '*',
-      'populate[defaultIngredients][populate]': '*',
-      'populate[optionalIngredients][populate]': '*',
       'populate[image]': '*',
     }
+    
+    // Only add ingredient populates if they exist in your Strapi schema
+    // Uncomment these if you have ingredient relations set up:
+    // 'populate[defaultIngredients][populate]': '*',
+    // 'populate[optionalIngredients][populate]': '*',
 
     // Add category filter if provided
     if (categorySlug) {
