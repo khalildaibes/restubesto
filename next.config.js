@@ -10,6 +10,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'via.placeholder.com',
       },
+      {
+        protocol: 'http',
+        hostname: '142.93.172.35',
+        port: '1337',
+      },
     ],
   },
 }
