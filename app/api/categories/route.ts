@@ -19,10 +19,16 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(data, { status: 200 })
   } catch (error) {
-    console.error('Error fetching categories:', error)
+    console.error('Error fetching categories from Strapi:', error)
+    
+    // Return empty data structure instead of error
     return NextResponse.json(
-      { error: 'Failed to fetch categories', message: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { 
+        data: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+        meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } }
+      },
+      { status: 200 }
     )
   }
 }

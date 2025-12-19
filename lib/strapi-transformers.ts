@@ -10,17 +10,35 @@ import type { MultilingualText } from '@/types/domain/MultilingualText'
 
 /**
  * Get image URL from Strapi image data structure
+ * Handles both media field (image.data.attributes.url) and text field (imageUrl)
  */
-function getImageUrl(imageData: any): string {
-  if (!imageData?.data?.attributes?.url) {
-    return ''
+function getImageUrl(imageData: any, imageUrlField?: string): string {
+  // First check if imageUrl is provided as a direct field (from populate script)
+  if (imageUrlField && typeof imageUrlField === 'string' && imageUrlField.trim()) {
+    return imageUrlField
   }
-  const url = imageData.data.attributes.url
-  // If URL is already absolute, return it; otherwise prepend STRAPI_URL
-  if (url.startsWith('http')) {
-    return url
+
+  // Then check for Strapi media field structure
+  if (imageData?.data?.attributes?.url) {
+    const url = imageData.data.attributes.url
+    // If URL is already absolute, return it; otherwise prepend STRAPI_URL
+    if (url.startsWith('http')) {
+      return url
+    }
+    return `${STRAPI_URL}${url}`
   }
-  return `${STRAPI_URL}${url}`
+
+  // Check for alternative Strapi media structures
+  if (imageData?.attributes?.url) {
+    const url = imageData.attributes.url
+    if (url.startsWith('http')) {
+      return url
+    }
+    return `${STRAPI_URL}${url}`
+  }
+
+  // Fallback: return empty string or placeholder
+  return ''
 }
 
 /**
@@ -49,7 +67,7 @@ export function transformCategory(strapiCategory: any, locale: string = 'en'): C
     slug: attrs.slug || '',
     name,
     description,
-    imageUrl: getImageUrl(attrs.image),
+    imageUrl: getImageUrl(attrs.image, attrs.imageUrl),
   }
 }
 
@@ -95,7 +113,7 @@ export function transformMeal(strapiMeal: any, locale: string = 'en'): Meal {
     name,
     description,
     price: attrs.price || 0,
-    imageUrl: getImageUrl(attrs.image),
+    imageUrl: getImageUrl(attrs.image, attrs.imageUrl),
     calories: attrs.calories || undefined,
     tags: tags.length > 0 ? tags : undefined,
     // Ingredients would be transformed similarly if needed
@@ -122,7 +140,7 @@ export function transformBanner(strapiBanner: any, locale: string = 'en'): Banne
 
   return {
     id: String(strapiBanner.id),
-    imageUrl: getImageUrl(attrs.image),
+    imageUrl: getImageUrl(attrs.image, attrs.imageUrl),
     title,
     subtitle,
   }

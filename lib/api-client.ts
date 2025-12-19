@@ -10,9 +10,12 @@ import {
   transformMeals,
   transformBanners,
 } from './strapi-transformers'
+import { categories as mockCategories } from '@/data/mock/categories'
+import { meals as mockMeals } from '@/data/mock/meals'
+import { banners as mockBanners } from '@/data/mock/banners'
 
 /**
- * Fetch categories from API
+ * Fetch categories from API with fallback to mock data
  */
 export async function fetchCategories(locale: string = 'en'): Promise<Category[]> {
   try {
@@ -21,15 +24,30 @@ export async function fetchCategories(locale: string = 'en'): Promise<Category[]
       throw new Error(`Failed to fetch categories: ${response.statusText}`)
     }
     const data = await response.json()
-    return transformCategories(data, locale)
+    
+    // If no data or empty array, fallback to mock data
+    if (!data?.data || data.data.length === 0) {
+      console.warn('No categories from API, using mock data')
+      return mockCategories
+    }
+    
+    const transformed = transformCategories(data, locale)
+    
+    // If transformation resulted in empty array, use mock data
+    if (transformed.length === 0) {
+      console.warn('Categories transformation failed, using mock data')
+      return mockCategories
+    }
+    
+    return transformed
   } catch (error) {
-    console.error('Error fetching categories:', error)
-    return []
+    console.error('Error fetching categories, using mock data:', error)
+    return mockCategories
   }
 }
 
 /**
- * Fetch meals from API
+ * Fetch meals from API with fallback to mock data
  */
 export async function fetchMeals(
   locale: string = 'en',
@@ -45,15 +63,42 @@ export async function fetchMeals(
       throw new Error(`Failed to fetch meals: ${response.statusText}`)
     }
     const data = await response.json()
-    return transformMeals(data, locale)
+    
+    // If no data or empty array, fallback to mock data
+    if (!data?.data || data.data.length === 0) {
+      console.warn('No meals from API, using mock data')
+      let filteredMeals = mockMeals
+      if (categorySlug) {
+        filteredMeals = mockMeals.filter(meal => meal.categorySlug === categorySlug)
+      }
+      return filteredMeals
+    }
+    
+    const transformed = transformMeals(data, locale)
+    
+    // If transformation resulted in empty array, use mock data
+    if (transformed.length === 0) {
+      console.warn('Meals transformation failed, using mock data')
+      let filteredMeals = mockMeals
+      if (categorySlug) {
+        filteredMeals = mockMeals.filter(meal => meal.categorySlug === categorySlug)
+      }
+      return filteredMeals
+    }
+    
+    return transformed
   } catch (error) {
-    console.error('Error fetching meals:', error)
-    return []
+    console.error('Error fetching meals, using mock data:', error)
+    let filteredMeals = mockMeals
+    if (categorySlug) {
+      filteredMeals = mockMeals.filter(meal => meal.categorySlug === categorySlug)
+    }
+    return filteredMeals
   }
 }
 
 /**
- * Fetch banners from API
+ * Fetch banners from API with fallback to mock data
  */
 export async function fetchBanners(locale: string = 'en'): Promise<Banner[]> {
   try {
@@ -62,10 +107,25 @@ export async function fetchBanners(locale: string = 'en'): Promise<Banner[]> {
       throw new Error(`Failed to fetch banners: ${response.statusText}`)
     }
     const data = await response.json()
-    return transformBanners(data, locale)
+    
+    // If no data or empty array, fallback to mock data
+    if (!data?.data || data.data.length === 0) {
+      console.warn('No banners from API, using mock data')
+      return mockBanners
+    }
+    
+    const transformed = transformBanners(data, locale)
+    
+    // If transformation resulted in empty array, use mock data
+    if (transformed.length === 0) {
+      console.warn('Banners transformation failed, using mock data')
+      return mockBanners
+    }
+    
+    return transformed
   } catch (error) {
-    console.error('Error fetching banners:', error)
-    return []
+    console.error('Error fetching banners, using mock data:', error)
+    return mockBanners
   }
 }
 

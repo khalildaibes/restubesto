@@ -40,21 +40,49 @@ export async function fetchFromStrapi(
 ) {
   const url = buildStrapiUrl(endpoint, params)
   
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...getStrapiHeaders(),
-      ...options.headers,
-    },
-  })
+  try {
+    // Create abort controller for timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+    
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...getStrapiHeaders(),
+        ...options.headers,
+      },
+      signal: controller.signal,
+    })
+    
+    clearTimeout(timeoutId)
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(
-      `Strapi API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`
-    )
+    if (!response.ok) {
+      const errorText = await response.text()
+      let errorData
+      try {
+        errorData = JSON.parse(errorText)
+      } catch {
+        errorData = { message: errorText }
+      }
+      
+      const errorMessage = errorData?.error?.message || errorData?.message || response.statusText
+      throw new Error(
+        `Strapi API error (${response.status}): ${errorMessage}`
+      )
+    }
+
+    return response.json()
+  } catch (error) {
+    // Handle network errors, timeouts, etc.
+    if (error instanceof Error) {
+      if (error.name === 'AbortError' || error.message.includes('timeout')) {
+        throw new Error('Strapi API request timeout - server may be unreachable')
+      }
+      if (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED')) {
+        throw new Error('Cannot connect to Strapi server - check if server is running and accessible')
+      }
+    }
+    throw error
   }
-
-  return response.json()
 }
 
