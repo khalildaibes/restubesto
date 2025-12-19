@@ -1,0 +1,2 @@
+export { MealDetailModal } from './MealDetailModal'
+

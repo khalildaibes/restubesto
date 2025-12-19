@@ -1,0 +1,2 @@
+export { PromotionBanner } from './PromotionBanner'
+
