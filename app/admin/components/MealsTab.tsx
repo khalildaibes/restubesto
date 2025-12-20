@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLanguageStore } from '@/stores/language'
 
 interface Meal {
   id: string
@@ -29,6 +30,7 @@ interface Ingredient {
 }
 
 export function MealsTab() {
+  const { language } = useLanguageStore()
   const [meals, setMeals] = useState<Meal[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
@@ -42,12 +44,12 @@ export function MealsTab() {
     fetchMeals()
     fetchCategories()
     fetchIngredients()
-  }, [])
+  }, [language])
 
   const fetchMeals = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/meals?locale=en')
+      const response = await fetch(`/api/admin/meals?locale=${language}`)
       const data = await response.json()
       
       if (data.data && Array.isArray(data.data)) {
@@ -85,7 +87,7 @@ export function MealsTab() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories?locale=en')
+      const response = await fetch(`/api/categories?locale=${language}`)
       const data = await response.json()
       if (data.data && Array.isArray(data.data)) {
         const categoriesList = data.data.map((item: any) => {
@@ -105,7 +107,7 @@ export function MealsTab() {
 
   const fetchIngredients = async () => {
     try {
-      const response = await fetch('/api/admin/ingredients?locale=en')
+      const response = await fetch(`/api/admin/ingredients?locale=${language}`)
       const data = await response.json()
       if (data.data && Array.isArray(data.data)) {
         const ingredientsList = data.data.map((item: any) => {
@@ -163,7 +165,7 @@ export function MealsTab() {
       ...mealData,
       imageUrl,
       available: mealData.available !== undefined ? mealData.available : true,
-      locale: 'en',
+      locale: language,
     }
 
       const url = editingMeal 

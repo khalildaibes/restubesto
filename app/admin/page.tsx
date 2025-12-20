@@ -1,14 +1,47 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { OrdersTab } from './components/OrdersTab'
 import { MealsTab } from './components/MealsTab'
 import { IngredientsTab } from './components/IngredientsTab'
+import { LoginForm } from './components/LoginForm'
+import { LanguageSwitcher } from '@/features/language/components/LanguageSwitcher'
 
 type Tab = 'orders' | 'meals' | 'ingredients'
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('orders')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Check if user is authenticated on mount
+    const authenticated = sessionStorage.getItem('adminAuthenticated') === 'true'
+    setIsAuthenticated(authenticated)
+    setIsLoading(false)
+  }, [])
+
+  const handleLogin = () => {
+    setIsAuthenticated(true)
+  }
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('adminAuthenticated')
+    sessionStorage.removeItem('adminUsername')
+    setIsAuthenticated(false)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={handleLogin} />
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -16,6 +49,15 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+            <div className="flex items-center gap-4">
+              <LanguageSwitcher />
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Logout
+              </button>
+            </div>
           </div>
           
           {/* Tabs */}

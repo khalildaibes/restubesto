@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLanguageStore } from '@/stores/language'
 
 interface Ingredient {
   id: string
@@ -10,6 +11,7 @@ interface Ingredient {
 }
 
 export function IngredientsTab() {
+  const { language } = useLanguageStore()
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [loading, setLoading] = useState(true)
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null)
@@ -17,12 +19,12 @@ export function IngredientsTab() {
 
   useEffect(() => {
     fetchIngredients()
-  }, [])
+  }, [language])
 
   const fetchIngredients = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/ingredients?locale=en')
+      const response = await fetch(`/api/admin/ingredients?locale=${language}`)
       const data = await response.json()
       
       if (data.data && Array.isArray(data.data)) {
@@ -50,7 +52,7 @@ export function IngredientsTab() {
     try {
       const payload = {
         ...ingredientData,
-        locale: 'en',
+        locale: language,
       }
 
       const url = editingIngredient 
