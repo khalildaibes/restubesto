@@ -40,8 +40,10 @@ export function getStrapiHeaders() {
  * Always includes locale parameter (defaults to 'en' if not provided)
  * This matches the populate script pattern where locale is always included in the query string
  * Structure matches createRequest function: locale is always appended last
+ * 
+ * @param skipLocale - If true, skip adding locale parameter (for non-i18n collections like orders)
  */
-export function buildStrapiUrl(endpoint: string, params?: Record<string, string>) {
+export function buildStrapiUrl(endpoint: string, params?: Record<string, string>, skipLocale: boolean = false) {
   // Validate and ensure locale is always included (matching populate script pattern)
   const validLocales = ['en', 'he', 'ar']
   const locale = params?.locale && validLocales.includes(params.locale) 
@@ -52,7 +54,7 @@ export function buildStrapiUrl(endpoint: string, params?: Record<string, string>
   const hasQueryParams = endpoint.includes('?')
   const baseUrl = `${STRAPI_URL}/api${endpoint}`
   
-  // Build query parameters (excluding locale, which we'll append last)
+  // Build query parameters (excluding locale, which we'll append last if not skipping)
   const queryParams: string[] = []
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -66,14 +68,25 @@ export function buildStrapiUrl(endpoint: string, params?: Record<string, string>
   // Pattern matches createRequest: endpoint?otherParams&locale=en or endpoint?locale=en
   // If endpoint has query params, use &, otherwise use ?
   const separator = hasQueryParams ? '&' : '?'
-  const otherParams = queryParams.length > 0 ? `${queryParams.join('&')}&` : ''
+  let finalUrl = baseUrl
   
-  const finalUrl = `${baseUrl}${separator}${otherParams}locale=${locale}`
+  if (queryParams.length > 0 || !skipLocale) {
+    const otherParams = queryParams.length > 0 ? queryParams.join('&') : ''
+    const localeParam = skipLocale ? '' : `locale=${locale}`
+    
+    if (otherParams && localeParam) {
+      finalUrl = `${baseUrl}${separator}${otherParams}&${localeParam}`
+    } else if (otherParams) {
+      finalUrl = `${baseUrl}${separator}${otherParams}`
+    } else if (localeParam) {
+      finalUrl = `${baseUrl}${separator}${localeParam}`
+    }
+  }
   
   // Log the endpoint being called
   console.log('🌐 Strapi API Request:', {
     endpoint,
-    locale,
+    locale: skipLocale ? 'none' : locale,
     fullUrl: finalUrl,
     params: params ? Object.keys(params).filter(k => k !== 'locale') : [],
   })
@@ -84,13 +97,16 @@ export function buildStrapiUrl(endpoint: string, params?: Record<string, string>
 /**
  * Fetch from Strapi API with error handling
  * Locale is always included in the request (matching populate script pattern)
+ * 
+ * @param skipLocale - If true, skip adding locale parameter (for non-i18n collections like orders)
  */
 export async function fetchFromStrapi(
   endpoint: string,
   options: RequestInit = {},
-  params?: Record<string, string>
+  params?: Record<string, string>,
+  skipLocale: boolean = false
 ) {
-  const url = buildStrapiUrl(endpoint, params)
+  const url = buildStrapiUrl(endpoint, params, skipLocale)
   
   try {
     // Create abort controller for timeout

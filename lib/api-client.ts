@@ -127,7 +127,7 @@ export async function fetchBanners(locale: string = 'en'): Promise<Banner[]> {
     }
     
     const data = await response.json()
-    console.log('📦 Banners API response:', {
+    console.log(':', {
       locale,
       dataCount: data?.data?.length || 0,
       hasData: !!data?.data,

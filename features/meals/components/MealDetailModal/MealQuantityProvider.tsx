@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useContext, createContext, ReactNode } from 'react'
+import { useState, useContext, createContext, ReactNode, useEffect } from 'react'
 
 const QuantityContext = createContext<{
   quantity: number
@@ -17,10 +17,15 @@ export function useMealQuantity() {
 
 interface MealQuantityProviderProps {
   children: ReactNode
+  initialQuantity?: number
 }
 
-export function MealQuantityProvider({ children }: MealQuantityProviderProps) {
-  const [quantity, setQuantity] = useState(1)
+export function MealQuantityProvider({ children, initialQuantity = 1 }: MealQuantityProviderProps) {
+  const [quantity, setQuantity] = useState(initialQuantity)
+
+  useEffect(() => {
+    setQuantity(initialQuantity)
+  }, [initialQuantity])
 
   return (
     <QuantityContext.Provider value={{ quantity, setQuantity }}>

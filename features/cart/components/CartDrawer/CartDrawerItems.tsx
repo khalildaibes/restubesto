@@ -1,11 +1,16 @@
 'use client'
 
+import type { CartItem } from '@/stores/cart'
 import { useCartStore } from '@/stores/cart'
 import { useTranslations } from '@/shared/i18n'
 import { CartEmptyState } from './CartEmptyState'
 import { CartItemList } from './CartItemList'
 
-export function CartDrawerItems() {
+interface CartDrawerItemsProps {
+  onEditItem?: (item: CartItem) => void
+}
+
+export function CartDrawerItems({ onEditItem }: CartDrawerItemsProps) {
   const items = useCartStore((state) => state.items)
   const t = useTranslations()
 
@@ -14,7 +19,7 @@ export function CartDrawerItems() {
       {items.length === 0 ? (
         <CartEmptyState message={t.cart.empty} />
       ) : (
-        <CartItemList items={items} />
+        <CartItemList items={items} onEditItem={onEditItem} />
       )}
     </div>
   )

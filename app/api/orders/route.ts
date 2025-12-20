@@ -11,6 +11,13 @@ export interface OrderItem {
   quantity: number
   unitPrice: number
   totalPrice: number
+  // Default ingredients that come with the meal (always included)
+  defaultIngredients?: Array<{
+    id: string
+    name: string
+    price: number
+  }>
+  // Optional ingredients that the customer selected (added for extra cost)
   selectedIngredients?: Array<{
     id: string
     name: string
@@ -69,10 +76,11 @@ export async function POST(request: NextRequest) {
       publishedAt: new Date().toISOString(),
     }
 
+    // Orders are not i18n enabled, so skip locale parameter
     const data = await fetchFromStrapi('/orders', {
       method: 'POST',
       body: JSON.stringify({ data: orderData }),
-    })
+    }, {}, true) // skipLocale = true for orders
     
     return NextResponse.json(
       { 
@@ -99,31 +107,27 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const orderNumber = searchParams.get('orderNumber')
     const customerEmail = searchParams.get('customerEmail')
-    
-    const queryParams = new URLSearchParams({
-      sort: 'createdAt:desc',
-    })
+    const status = searchParams.get('status')
+
+    const params: Record<string, string> = {
+      'sort': 'createdAt:desc',
+    }
 
     // Add filters if provided
-    if (orderNumber) {
-      queryParams.append('filters[orderNumber][$eq]', orderNumber)
-    }
-    if (customerEmail) {
-      queryParams.append('filters[customerEmail][$eq]', customerEmail)
-    }
-
-    const params: Record<string, string> = {}
     if (orderNumber) {
       params['filters[orderNumber][$eq]'] = orderNumber
     }
     if (customerEmail) {
       params['filters[customerEmail][$eq]'] = customerEmail
     }
-    params['sort'] = 'createdAt:desc'
+    if (status) {
+      params['filters[status][$eq]'] = status
+    }
 
+    // Orders are not i18n enabled, so skip locale parameter
     const data = await fetchFromStrapi('/orders', {
       cache: 'no-store',
-    }, params)
+    }, params, true) // skipLocale = true for orders
     
     return NextResponse.json(data, { status: 200 })
   } catch (error) {

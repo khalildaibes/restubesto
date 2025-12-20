@@ -28,3 +28,78 @@ body {
   direction: ltr;
 }
 
+/* RTL-aware text alignment */
+[dir='rtl'] .text-left {
+  text-align: right;
+}
+
+[dir='rtl'] .text-right {
+  text-align: left;
+}
+
+/* RTL-aware positioning - flip left/right */
+[dir='rtl'] .right-0 {
+  left: 0;
+  right: auto;
+}
+
+[dir='rtl'] .right-4 {
+  left: 1rem;
+  right: auto;
+}
+
+[dir='rtl'] .left-0 {
+  right: 0;
+  left: auto;
+}
+
+[dir='rtl'] .left-4 {
+  right: 1rem;
+  left: auto;
+}
+
+[dir='rtl'] .-right-1 {
+  left: -0.25rem;
+  right: auto;
+}
+
+[dir='rtl'] .left-1\/2 {
+  right: 50%;
+  left: auto;
+}
+
+/* RTL-aware margins and padding */
+[dir='rtl'] .ml-1 {
+  margin-right: 0.25rem;
+  margin-left: 0;
+}
+
+[dir='rtl'] .ml-2 {
+  margin-right: 0.5rem;
+  margin-left: 0;
+}
+
+[dir='rtl'] .mr-1 {
+  margin-left: 0.25rem;
+  margin-right: 0;
+}
+
+[dir='rtl'] .mr-2 {
+  margin-left: 0.5rem;
+  margin-right: 0;
+}
+
+[dir='rtl'] .mr-3 {
+  margin-left: 0.75rem;
+  margin-right: 0;
+}
+
+/* Ensure proper RTL layout */
+html[dir='rtl'] {
+  direction: rtl;
+}
+
+html[dir='ltr'] {
+  direction: ltr;
+}
+

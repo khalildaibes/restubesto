@@ -12,7 +12,7 @@ export function MealCardContent({
   language,
 }: MealCardContentProps) {
   return (
-    <div className="flex-1 text-left">
+    <div className="flex-1 text-start">
       <h3 className="text-lg font-semibold text-gray-900 mb-1">
         {getText(meal.name, language)}
       </h3>

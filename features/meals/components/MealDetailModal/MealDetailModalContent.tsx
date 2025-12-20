@@ -11,15 +11,24 @@ import { SelectedIngredientsProvider } from './SelectedIngredientsProvider'
 interface MealDetailModalContentProps {
   meal: Meal
   onClose: () => void
+  initialSelectedIngredients?: string[]
+  initialQuantity?: number
+  onUpdate?: () => void
 }
 
 export function MealDetailModalContent({
   meal,
   onClose,
+  initialSelectedIngredients = [],
+  initialQuantity = 1,
+  onUpdate,
 }: MealDetailModalContentProps) {
   return (
-    <MealQuantityProvider>
-      <SelectedIngredientsProvider meal={meal}>
+    <MealQuantityProvider initialQuantity={initialQuantity}>
+      <SelectedIngredientsProvider 
+        meal={meal}
+        initialSelected={initialSelectedIngredients}
+      >
         <motion.div
           initial={{ y: '100%', opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -29,7 +38,7 @@ export function MealDetailModalContent({
         >
           <MealDetailHeader meal={meal} onClose={onClose} />
           <MealDetailBody meal={meal} />
-          <MealDetailFooter meal={meal} onClose={onClose} />
+          <MealDetailFooter meal={meal} onClose={onClose} onUpdate={onUpdate} />
         </motion.div>
       </SelectedIngredientsProvider>
     </MealQuantityProvider>

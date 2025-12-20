@@ -341,6 +341,7 @@ export function transformMeal(strapiMeal: any, locale: string = 'en'): Meal {
     tags: tags.length > 0 ? tags : undefined,
     defaultIngredients: defaultIngredients.length > 0 ? defaultIngredients : undefined,
     optionalIngredients: optionalIngredients.length > 0 ? optionalIngredients : undefined,
+    available: attrs.available !== undefined ? attrs.available : true, // Default to true if not specified
   }
 }
 

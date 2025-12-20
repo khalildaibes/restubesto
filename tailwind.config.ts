@@ -39,6 +39,10 @@ const config: Config = {
       })
     },
   ],
+  // Enable RTL support
+  corePlugins: {
+    preflight: true,
+  },
 }
 export default config
 

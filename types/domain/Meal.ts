@@ -12,5 +12,6 @@ export interface Meal {
   tags?: MultilingualText[]
   defaultIngredients?: Ingredient[]
   optionalIngredients?: Ingredient[]
+  available?: boolean // Whether the meal is in stock (defaults to true if not specified)
 }
 

@@ -54,7 +54,7 @@ export function LanguageSwitcher() {
                     setLanguage(lang.code)
                     setIsOpen(false)
                   }}
-                  className={`w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm ${
+                  className={`w-full px-4 py-2 text-start hover:bg-gray-50 transition-colors text-sm ${
                     language === lang.code
                       ? 'bg-gray-50 font-semibold text-gray-900'
                       : 'text-gray-700'

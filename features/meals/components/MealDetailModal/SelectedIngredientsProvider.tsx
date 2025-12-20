@@ -19,14 +19,24 @@ export function useSelectedIngredients() {
 interface SelectedIngredientsProviderProps {
   children: ReactNode
   meal: Meal
+  initialSelected?: string[]
 }
 
-export function SelectedIngredientsProvider({ children, meal }: SelectedIngredientsProviderProps) {
-  const [selected, setSelected] = useState<string[]>([])
+export function SelectedIngredientsProvider({ 
+  children, 
+  meal,
+  initialSelected = []
+}: SelectedIngredientsProviderProps) {
+  const [selected, setSelected] = useState<string[]>(initialSelected)
 
   useEffect(() => {
-    setSelected([])
-  }, [meal.id])
+    // Reset to initial selected when meal changes, or use initialSelected if provided
+    if (initialSelected.length > 0) {
+      setSelected(initialSelected)
+    } else {
+      setSelected([])
+    }
+  }, [meal.id, initialSelected])
 
   return (
     <SelectedIngredientsContext.Provider value={{ selected, setSelected }}>
