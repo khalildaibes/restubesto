@@ -12,17 +12,15 @@ import {
   transformBanners,
 } from './strapi-transformers'
 import { getText } from '@/shared/utils/i18n/getText'
-import { categories as mockCategories } from '@/data/mock/categories'
-import { meals as mockMeals } from '@/data/mock/meals'
-import { banners as mockBanners } from '@/data/mock/banners'
 
 /**
- * Fetch categories from API with fallback to mock data
+ * Fetch categories from API
  */
 export async function fetchCategories(locale: string = 'en'): Promise<Category[]> {
   try {
-    console.log('📡 Fetching categories from API with locale:', locale)
-    const response = await fetch(`/api/categories?locale=${locale}`)
+    const apiUrl = `/api/categories?locale=${locale}`
+    console.log('📡 [CLIENT] Fetching categories:', apiUrl)
+    const response = await fetch(apiUrl)
     
     if (!response.ok) {
       console.error('❌ Categories API error:', response.status, response.statusText)
@@ -34,12 +32,15 @@ export async function fetchCategories(locale: string = 'en'): Promise<Category[]
       locale,
       dataCount: data?.data?.length || 0,
       hasData: !!data?.data,
+      dataIsArray: Array.isArray(data?.data),
+      dataIsNull: data?.data === null,
+      fullResponse: data, // Log full response to see structure
     })
     
-    // If no data or empty array, fallback to mock data
+    // If no data or empty array, return empty array
     if (!data?.data || data.data.length === 0) {
-      console.warn('⚠️ No categories from API, using mock data')
-      return mockCategories
+      console.warn('⚠️ No categories from API, returning empty array')
+      return []
     }
     
     const transformed = transformCategories(data, locale)
@@ -49,21 +50,16 @@ export async function fetchCategories(locale: string = 'en'): Promise<Category[]
       categories: transformed.map(c => ({ id: c.id, slug: c.slug, hasImage: !!c.imageUrl })),
     })
     
-    // If transformation resulted in empty array, use mock data
-    if (transformed.length === 0) {
-      console.warn('⚠️ Categories transformation failed, using mock data')
-      return mockCategories
-    }
-    
+    // Return transformed data (even if empty)
     return transformed
   } catch (error) {
-    console.error('❌ Error fetching categories, using mock data:', error)
-    return mockCategories
+    console.error('❌ Error fetching categories:', error)
+    return []
   }
 }
 
 /**
- * Fetch meals from API with fallback to mock data
+ * Fetch meals from API
  */
 export async function fetchMeals(
   locale: string = 'en',
@@ -75,7 +71,7 @@ export async function fetchMeals(
       url += `&category=${categorySlug}`
     }
     
-    console.log('📡 Fetching meals from API:', { locale, categorySlug, url })
+    console.log('📡 [CLIENT] Fetching meals:', url)
     const response = await fetch(url)
     
     if (!response.ok) {
@@ -89,16 +85,15 @@ export async function fetchMeals(
       categorySlug,
       dataCount: data?.data?.length || 0,
       hasData: !!data?.data,
+      dataIsArray: Array.isArray(data?.data),
+      dataIsNull: data?.data === null,
+      fullResponse: data, // Log full response to see structure
     })
     
-    // If no data or empty array, fallback to mock data
+    // If no data or empty array, return empty array
     if (!data?.data || data.data.length === 0) {
-      console.warn('⚠️ No meals from API, using mock data')
-      let filteredMeals = mockMeals
-      if (categorySlug) {
-        filteredMeals = mockMeals.filter(meal => meal.categorySlug === categorySlug)
-      }
-      return filteredMeals
+      console.warn('⚠️ No meals from API, returning empty array')
+      return []
     }
     
     const transformed = transformMeals(data, locale)
@@ -109,34 +104,22 @@ export async function fetchMeals(
       meals: transformed.map(m => ({ id: m.id, name: getText(m.name, locale as Language), hasImage: !!m.imageUrl })),
     })
     
-    // If transformation resulted in empty array, use mock data
-    if (transformed.length === 0) {
-      console.warn('⚠️ Meals transformation failed, using mock data')
-      let filteredMeals = mockMeals
-      if (categorySlug) {
-        filteredMeals = mockMeals.filter(meal => meal.categorySlug === categorySlug)
-      }
-      return filteredMeals
-    }
-    
+    // Return transformed data (even if empty)
     return transformed
   } catch (error) {
-    console.error('❌ Error fetching meals, using mock data:', error)
-    let filteredMeals = mockMeals
-    if (categorySlug) {
-      filteredMeals = mockMeals.filter(meal => meal.categorySlug === categorySlug)
-    }
-    return filteredMeals
+    console.error('❌ Error fetching meals:', error)
+    return []
   }
 }
 
 /**
- * Fetch banners from API with fallback to mock data
+ * Fetch banners from API
  */
 export async function fetchBanners(locale: string = 'en'): Promise<Banner[]> {
   try {
-    console.log('📡 Fetching banners from API with locale:', locale)
-    const response = await fetch(`/api/banners?locale=${locale}`)
+    const apiUrl = `/api/banners?locale=${locale}`
+    console.log('📡 [CLIENT] Fetching banners:', apiUrl)
+    const response = await fetch(apiUrl)
     
     if (!response.ok) {
       console.error('❌ Banners API error:', response.status, response.statusText)
@@ -148,12 +131,15 @@ export async function fetchBanners(locale: string = 'en'): Promise<Banner[]> {
       locale,
       dataCount: data?.data?.length || 0,
       hasData: !!data?.data,
+      dataIsArray: Array.isArray(data?.data),
+      dataIsNull: data?.data === null,
+      fullResponse: data, // Log full response to see structure
     })
     
-    // If no data or empty array, fallback to mock data
+    // If no data or empty array, return empty array
     if (!data?.data || data.data.length === 0) {
-      console.warn('⚠️ No banners from API, using mock data')
-      return mockBanners
+      console.warn('⚠️ No banners from API, returning empty array')
+      return []
     }
     
     const transformed = transformBanners(data, locale)
@@ -163,16 +149,11 @@ export async function fetchBanners(locale: string = 'en'): Promise<Banner[]> {
       banners: transformed.map(b => ({ id: b.id, hasImage: !!b.imageUrl })),
     })
     
-    // If transformation resulted in empty array, use mock data
-    if (transformed.length === 0) {
-      console.warn('⚠️ Banners transformation failed, using mock data')
-      return mockBanners
-    }
-    
+    // Return transformed data (even if empty)
     return transformed
   } catch (error) {
-    console.error('❌ Error fetching banners, using mock data:', error)
-    return mockBanners
+    console.error('❌ Error fetching banners:', error)
+    return []
   }
 }
 

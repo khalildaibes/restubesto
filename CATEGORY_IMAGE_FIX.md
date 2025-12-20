@@ -78,3 +78,4 @@ Categories from Strapi might have:
 - Added debug logging for development
 - Better handling of empty/null values
 
+

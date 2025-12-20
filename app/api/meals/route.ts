@@ -15,25 +15,59 @@ export async function GET(request: NextRequest) {
     const validLocales = ['en', 'he', 'ar']
     const finalLocale = validLocales.includes(locale) ? locale : 'en'
     
+    console.log('🔵 [API ROUTE] GET /api/meals', {
+      requestUrl: request.url,
+      locale: finalLocale,
+      categorySlug: categorySlug || 'none',
+    })
+    
     // Build query parameters
-    // Only populate fields that exist in Strapi
-    // Note: defaultIngredients and optionalIngredients are not populated
-    // because they may not exist as relations in your Strapi schema
+    // Note: Removed populate[category] because 'category' relation doesn't exist in Strapi schema
+    // Meals likely have categorySlug as a direct field instead
+    // Note: Removed populate[tags] - will add back if tags relation exists
+    // Note: Removed populate[image] because 'image' field doesn't exist in Strapi schema
+    // Images are stored in 'imageUrl' text field instead
     const params: Record<string, string> = {
       locale: finalLocale,
-      'populate[category][populate]': '*',
-      'populate[tags][populate]': '*',
-      'populate[image]': '*',
+      // Note: Strapi by default only returns published content
+      // If you need unpublished content, add: 'publicationState': 'preview'
     }
 
-    // Add category filter if provided
+    // Add category filter if provided - use categorySlug field directly
     if (categorySlug) {
-      params['filters[category][slug][$eq]'] = categorySlug
+      params['filters[categorySlug][$eq]'] = categorySlug
     }
 
     const data = await fetchFromStrapi('/meals', {
       cache: 'no-store',
     }, params)
+    
+    console.log('📦 [API ROUTE] Meals response from Strapi:', {
+      hasData: !!data,
+      dataType: typeof data,
+      dataIsArray: Array.isArray(data?.data),
+      dataLength: Array.isArray(data?.data) ? data.data.length : data?.data ? 1 : 0,
+      dataIsNull: data?.data === null,
+      dataIsUndefined: data?.data === undefined,
+      responseKeys: data ? Object.keys(data) : [],
+      firstItem: Array.isArray(data?.data) && data.data.length > 0 ? {
+        id: data.data[0]?.id,
+        hasAttributes: !!data.data[0]?.attributes,
+        attributesKeys: data.data[0]?.attributes ? Object.keys(data.data[0].attributes) : [],
+      } : null,
+    })
+    
+    // If data is null or undefined, return empty array
+    if (!data || data.data === null || data.data === undefined) {
+      console.warn('⚠️ [API ROUTE] Strapi returned null/undefined data, returning empty array')
+      return NextResponse.json(
+        { 
+          data: [],
+          meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } }
+        },
+        { status: 200 }
+      )
+    }
     
     return NextResponse.json(data, { status: 200 })
   } catch (error) {

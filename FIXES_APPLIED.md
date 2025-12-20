@@ -109,3 +109,4 @@ To test the fixes:
 - The favicon 404 is normal if no favicon is set - you can add one to `app/favicon.ico` if needed
 - All fixes are backward compatible and won't break existing functionality
 
+

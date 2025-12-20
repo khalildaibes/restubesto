@@ -387,3 +387,4 @@ export function CheckoutButton() {
 - Responses are not cached by default (`cache: 'no-store'`)
 - All endpoints support internationalization via the `locale` parameter
 
+

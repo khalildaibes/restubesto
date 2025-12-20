@@ -14,6 +14,11 @@ export async function GET(request: NextRequest) {
     const validLocales = ['en', 'he', 'ar']
     const finalLocale = validLocales.includes(locale) ? locale : 'en'
     
+    console.log('🔵 [API ROUTE] GET /api/tags', {
+      requestUrl: request.url,
+      locale: finalLocale,
+    })
+    
     const params: Record<string, string> = {
       locale: finalLocale,
       sort: 'name:asc',

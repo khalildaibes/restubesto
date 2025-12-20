@@ -1,5 +1,5 @@
 /**
- * Script to populate Strapi CMS with static meals, categories, and tags
+ * Script to populate Strapi CMS with static meals, categories, tags, ingredients, and banners
  * 
  * Usage: node populate-strapi.js
  * 
@@ -9,9 +9,11 @@
  * - Valid API token with create permissions
  * 
  * This script will:
- * 1. Create categories (with i18n support for en, he, ar)
- * 2. Create tags (with i18n support)
- * 3. Create meals with relations to categories and tags
+ * 1. Create ingredients (with i18n support for en, he, ar)
+ * 2. Create categories (with i18n support for en, he, ar)
+ * 3. Create tags (with i18n support)
+ * 4. Create banners (with i18n support)
+ * 5. Create meals with relations to categories, tags, and ingredients
  * 
  * Note: The script checks for existing entries before creating to avoid duplicates.
  */
@@ -26,10 +28,52 @@ if (majorVersion < 18) {
   process.exit(1);
 }
 
-const STRAPI_URL = 'http://142.93.172.35:1337';
-const API_TOKEN = 'd78856f2b47379e13f458eb788564423412499d8b56f0ebc605627453d381169e9eddd9def1c6177eeab04fec56ac737bf2309f7f72a8487f4a09f753c4bd49090a5446c5f456bb2b8573b1ddd35a09faf078c621502f11c2a34cd848aca367bcf7b559fdec56d76029ac55bd08002710ca6677883d877833bec496b95d26bf6';
+const STRAPI_URL = 'http://46.101.178.174:1337';
+const API_TOKEN = 'ffe2eca12673af4f9098bce1b76f928a5df7302f93c96ebd975918cf8da919e335a574c665c14bef702ab830c0d5fec09e1e0b6966c5d5080625a4334c57b0b9058b011c44ca5f42cb894098da8f06e54131177102e2e26a3cb20e74f3187c8ab6ef0ecc52653e52db088b80b5ca509606794f655978a6e515c79ecdab69271';
 
-// Import data (we'll inline it since this is a standalone script)
+// Data from mock files (converted from TypeScript to JavaScript)
+const defaultIngredients = [
+  {
+    id: 'ing-1',
+    name: { en: 'Crab', he: 'סרטן', ar: 'سلطعون' },
+    price: 0,
+    isDefault: true,
+  },
+  {
+    id: 'ing-2',
+    name: { en: 'Avocado', he: 'אבוקדו', ar: 'أفوكادو' },
+    price: 0,
+    isDefault: true,
+  },
+  {
+    id: 'ing-3',
+    name: { en: 'Cucumber', he: 'מלפפון', ar: 'خيار' },
+    price: 0,
+    isDefault: true,
+  },
+];
+
+const optionalIngredients = [
+  {
+    id: 'ing-4',
+    name: { en: 'Extra Avocado', he: 'אבוקדו נוסף', ar: 'أفوكادو إضافي' },
+    price: 5,
+    isDefault: false,
+  },
+  {
+    id: 'ing-5',
+    name: { en: 'Spicy Mayo', he: 'מיונז חריף', ar: 'مايونيز حار' },
+    price: 3,
+    isDefault: false,
+  },
+  {
+    id: 'ing-6',
+    name: { en: 'No Cucumber', he: 'ללא מלפפון', ar: 'بدون خيار' },
+    price: 0,
+    isDefault: false,
+  },
+];
+
 const categories = [
   {
     id: '1',
@@ -85,6 +129,8 @@ const meals = [
     imageUrl: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=300&fit=crop',
     calories: 255,
     tags: [{ en: 'popular', he: 'פופולרי', ar: 'شائع' }],
+    defaultIngredients: defaultIngredients,
+    optionalIngredients: optionalIngredients,
   },
   {
     id: '2',
@@ -134,7 +180,7 @@ const meals = [
     price: 22,
     imageUrl: 'https://images.unsplash.com/photo-1562967914-608f82629710?w=400&h=300&fit=crop',
     calories: 95,
-    tags: [{ en: 'vegetarian', he: 'צמחוני', ar: 'نباتي' }],
+    tags: [{ en: 'vegetarian', he: 'צמחוני', ar: 'نباتי' }],
   },
   {
     id: '7',
@@ -144,7 +190,7 @@ const meals = [
     price: 18,
     imageUrl: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop',
     calories: 35,
-    tags: [{ en: 'vegetarian', he: 'צמחוני', ar: 'نباتي' }],
+    tags: [{ en: 'vegetarian', he: 'צמחוני', ar: 'نباتי' }],
   },
   {
     id: '8',
@@ -155,6 +201,21 @@ const meals = [
     imageUrl: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400&h=300&fit=crop',
     calories: 95,
     tags: [{ en: 'popular', he: 'פופולרי', ar: 'شائع' }],
+  },
+];
+
+const banners = [
+  {
+    id: '1',
+    imageUrl: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=800&h=400&fit=crop',
+    title: { en: 'Fresh Sushi Daily', he: 'סושי טרי יומי', ar: 'سوشي طازج يومي' },
+    subtitle: { en: 'Premium ingredients, authentic flavors', he: 'מרכיבים איכותיים, טעמים אותנטיים', ar: 'مكونات ممتازة، نكهات أصيلة' },
+  },
+  {
+    id: '2',
+    imageUrl: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&h=400&fit=crop',
+    title: { en: 'New Spring Rolls', he: 'רולים חדשים', ar: 'لفائف الربيع الجديدة' },
+    subtitle: { en: 'Crispy and delicious', he: 'פריכים וטעימים', ar: 'مقرمش ولذيذ' },
   },
 ];
 
@@ -284,6 +345,68 @@ async function strapiRequest(method, endpoint, data = null, locale = 'en') {
   }
 }
 
+// Create ingredient with i18n support
+async function createIngredient(ingredient) {
+  const ingredientSlug = ingredient.name.en.toLowerCase().replace(/\s+/g, '-');
+  console.log(`\n🥄 Creating ingredient: ${ingredient.name.en}...`);
+  
+  const ingredientIds = {};
+  
+  // Create ingredient for each locale
+  for (const locale of ['en', 'he', 'ar']) {
+    try {
+      // Skip existence check - i18n fields can't be filtered reliably
+      // Just try to create and handle duplicates
+      const data = {
+        name: ingredient.name[locale],
+        price: ingredient.price,
+        isDefault: ingredient.isDefault,
+        publishedAt: new Date().toISOString(),
+      };
+      
+      // Note: slug is typically auto-generated by Strapi from the name field
+      // If your Strapi setup requires explicit slug, uncomment the line below:
+      // data.slug = ingredientSlug;
+      
+      const result = await strapiRequest('POST', '/ingredients', data, locale);
+      ingredientIds[locale] = result.data.id;
+      console.log(`  ✓ Created ${locale} version (ID: ${result.data.id})`);
+    } catch (error) {
+      // If ingredient already exists (409 conflict or unique constraint), skip it
+      if (error.message.includes('409') || 
+          error.message.includes('already exists') || 
+          error.message.includes('unique') ||
+          error.message.includes('duplicate')) {
+        console.log(`  ⚠ Ingredient already exists for ${locale}, skipping...`);
+        // Try to fetch all ingredients and find by English name to get the ID
+        // This is a fallback - we'll use the English ID for all locales if needed
+        if (locale === 'en') {
+          try {
+            // Fetch all ingredients and find by matching English name
+            const allIngredients = await strapiRequest('GET', '/ingredients', null, 'en');
+            if (allIngredients.data && Array.isArray(allIngredients.data)) {
+              const found = allIngredients.data.find(ing => {
+                const attrs = ing.attributes || ing;
+                return attrs.name === ingredient.name.en;
+              });
+              if (found) {
+                ingredientIds[locale] = found.id;
+                console.log(`  ✓ Found existing ${locale} version (ID: ${found.id})`);
+              }
+            }
+          } catch (fetchError) {
+            // Ignore fetch errors
+          }
+        }
+      } else {
+        console.error(`  ✗ Failed to create ingredient for ${locale}: ${error.message}`);
+      }
+    }
+  }
+  
+  return ingredientIds.en || ingredientIds['en']; // Return the main ID
+}
+
 // Create category with i18n support
 async function createCategory(category) {
   console.log(`\n📁 Creating category: ${category.name.en}...`);
@@ -318,14 +441,41 @@ async function createCategory(category) {
         publishedAt: new Date().toISOString(),
       };
       
-      // Add image ID if available
+      // Add image as media field - try different formats
       if (imageId) {
+        // Try format: image: imageId (direct ID) - most common in Strapi v4
         data.image = imageId;
       }
       
-      const result = await strapiRequest('POST', '/categories', data, locale);
-      categoryIds[locale] = result.data.id;
-      console.log(`  ✓ Created ${locale} version (ID: ${result.data.id})`);
+      let result;
+      try {
+        result = await strapiRequest('POST', '/categories', data, locale);
+        categoryIds[locale] = result.data.id;
+        console.log(`  ✓ Created ${locale} version (ID: ${result.data.id})`);
+      } catch (createError) {
+        // If image field format failed, try alternative formats
+        if (createError.message.includes('Invalid key image') && imageId) {
+          console.log(`  ⚠ Trying alternative image format for ${locale}...`);
+          // Try format: image: { id: imageId }
+          const dataAlt = { ...data };
+          dataAlt.image = { id: imageId };
+          try {
+            result = await strapiRequest('POST', '/categories', dataAlt, locale);
+            categoryIds[locale] = result.data.id;
+            console.log(`  ✓ Created ${locale} version with alternative format (ID: ${result.data.id})`);
+          } catch (altError) {
+            // If that also fails, try without image
+            console.log(`  ⚠ Image format failed, creating without image for ${locale}...`);
+            const dataNoImage = { ...data };
+            delete dataNoImage.image;
+            result = await strapiRequest('POST', '/categories', dataNoImage, locale);
+            categoryIds[locale] = result.data.id;
+            console.log(`  ✓ Created ${locale} version without image (ID: ${result.data.id})`);
+          }
+        } else {
+          throw createError;
+        }
+      }
     } catch (error) {
       // If category already exists, try to find it
       if (error.message.includes('409') || error.message.includes('already exists') || error.message.includes('unique')) {
@@ -399,6 +549,78 @@ async function createTag(tag) {
   return tagIds.en || tagIds['en']; // Return the main ID
 }
 
+// Create banner with i18n support
+async function createBanner(banner) {
+  console.log(`\n🎯 Creating banner: ${banner.title.en}...`);
+  
+  // Upload image first (only once, not per locale)
+  let imageId = null;
+  if (banner.imageUrl) {
+    try {
+      imageId = await uploadImageToStrapi(banner.imageUrl);
+    } catch (error) {
+      console.error(`  ⚠ Failed to upload image, continuing without image: ${error.message}`);
+    }
+  }
+  
+  const bannerIds = {};
+  
+  // Create banner for each locale
+  for (const locale of ['en', 'he', 'ar']) {
+    try {
+      const data = {
+        title: banner.title[locale],
+        subtitle: banner.subtitle[locale],
+        publishedAt: new Date().toISOString(),
+      };
+      
+      // Add image as media field
+      if (imageId) {
+        data.image = imageId;
+      }
+      
+      let result;
+      try {
+        result = await strapiRequest('POST', '/banners', data, locale);
+        bannerIds[locale] = result.data.id;
+        console.log(`  ✓ Created ${locale} version (ID: ${result.data.id})`);
+      } catch (createError) {
+        // If image field format failed, try alternative formats
+        if (createError.message.includes('Invalid key image') && imageId) {
+          console.log(`  ⚠ Trying alternative image format for ${locale}...`);
+          // Try format: image: { id: imageId }
+          const dataAlt = { ...data };
+          dataAlt.image = { id: imageId };
+          try {
+            result = await strapiRequest('POST', '/banners', dataAlt, locale);
+            bannerIds[locale] = result.data.id;
+            console.log(`  ✓ Created ${locale} version with alternative format (ID: ${result.data.id})`);
+          } catch (altError) {
+            // If that also fails, try without image
+            console.log(`  ⚠ Image format failed, creating without image for ${locale}...`);
+            const dataNoImage = { ...data };
+            delete dataNoImage.image;
+            result = await strapiRequest('POST', '/banners', dataNoImage, locale);
+            bannerIds[locale] = result.data.id;
+            console.log(`  ✓ Created ${locale} version without image (ID: ${result.data.id})`);
+          }
+        } else {
+          throw createError;
+        }
+      }
+    } catch (error) {
+      // If banner already exists, try to find it
+      if (error.message.includes('409') || error.message.includes('already exists')) {
+        console.log(`  ⚠ Banner already exists for ${locale}, skipping...`);
+      } else {
+        console.error(`  ✗ Error creating banner for ${locale}: ${error.message}`);
+      }
+    }
+  }
+  
+  return bannerIds.en || bannerIds['en'];
+}
+
 // Get category ID by slug
 async function getCategoryIdBySlug(slug, locale = 'en') {
   try {
@@ -426,8 +648,21 @@ async function getTagIdByName(tagName, locale = 'en') {
   return null;
 }
 
+// Get ingredient ID by name (English name)
+async function getIngredientIdByName(name, locale = 'en') {
+  try {
+    const result = await strapiRequest('GET', `/ingredients?filters[name][$eq]=${encodeURIComponent(name)}`, null, locale);
+    if (result.data && result.data.length > 0) {
+      return result.data[0].id;
+    }
+  } catch (error) {
+    console.error(`Error fetching ingredient ${name}:`, error.message);
+  }
+  return null;
+}
+
 // Create meal with i18n support
-async function createMeal(meal, categoryIdMap, tagIdMap) {
+async function createMeal(meal, categoryIdMap, tagIdMap, ingredientIdMap) {
   console.log(`\n🍱 Creating meal: ${meal.name.en}...`);
   
   const categoryId = categoryIdMap[meal.categorySlug];
@@ -456,6 +691,36 @@ async function createMeal(meal, categoryIdMap, tagIdMap) {
     }
   }
   
+  // Get default ingredient IDs for this meal
+  const defaultIngredientIds = [];
+  if (meal.defaultIngredients) {
+    for (const ingredient of meal.defaultIngredients) {
+      // Use the English name as the key (lowercase, spaces replaced with hyphens)
+      const ingredientKey = ingredient.name.en.toLowerCase().replace(/\s+/g, '-');
+      const ingredientId = ingredientIdMap[ingredientKey];
+      if (ingredientId) {
+        defaultIngredientIds.push(ingredientId);
+      } else {
+        console.warn(`  ⚠ Default ingredient "${ingredient.name.en}" not found in ingredient map`);
+      }
+    }
+  }
+  
+  // Get optional ingredient IDs for this meal
+  const optionalIngredientIds = [];
+  if (meal.optionalIngredients) {
+    for (const ingredient of meal.optionalIngredients) {
+      // Use the English name as the key (lowercase, spaces replaced with hyphens)
+      const ingredientKey = ingredient.name.en.toLowerCase().replace(/\s+/g, '-');
+      const ingredientId = ingredientIdMap[ingredientKey];
+      if (ingredientId) {
+        optionalIngredientIds.push(ingredientId);
+      } else {
+        console.warn(`  ⚠ Optional ingredient "${ingredient.name.en}" not found in ingredient map`);
+      }
+    }
+  }
+  
   const mealIds = {};
   
   // Create meal for each locale
@@ -471,14 +736,53 @@ async function createMeal(meal, categoryIdMap, tagIdMap) {
         publishedAt: new Date().toISOString(),
       };
       
-      // Add image ID if available
+      // Add image as media field
       if (imageId) {
         data.image = imageId;
       }
       
-      const result = await strapiRequest('POST', '/meals', data, locale);
-      mealIds[locale] = result.data.id;
-      console.log(`  ✓ Created ${locale} version (ID: ${result.data.id})`);
+      // Add ingredient relations if available
+      if (defaultIngredientIds.length > 0) {
+        data.defaultIngredients = defaultIngredientIds;
+      }
+      if (optionalIngredientIds.length > 0) {
+        data.optionalIngredients = optionalIngredientIds;
+      }
+      
+      let result;
+      try {
+        result = await strapiRequest('POST', '/meals', data, locale);
+        mealIds[locale] = result.data.id;
+        console.log(`  ✓ Created ${locale} version (ID: ${result.data.id})`);
+      } catch (createError) {
+        // If image field format failed, try alternative formats
+        if (createError.message.includes('Invalid key image') && imageId) {
+          console.log(`  ⚠ Trying alternative image format for ${locale}...`);
+          // Try format: image: { id: imageId }
+          const dataAlt = { ...data };
+          dataAlt.image = { id: imageId };
+          try {
+            result = await strapiRequest('POST', '/meals', dataAlt, locale);
+            mealIds[locale] = result.data.id;
+            console.log(`  ✓ Created ${locale} version with alternative format (ID: ${result.data.id})`);
+          } catch (altError) {
+            // If that also fails, try without image
+            console.log(`  ⚠ Image format failed, creating without image for ${locale}...`);
+            const dataNoImage = { ...data };
+            delete dataNoImage.image;
+            result = await strapiRequest('POST', '/meals', dataNoImage, locale);
+            mealIds[locale] = result.data.id;
+            console.log(`  ✓ Created ${locale} version without image (ID: ${result.data.id})`);
+          }
+        } else {
+          // If meal already exists, try to find it
+          if (createError.message.includes('409') || createError.message.includes('already exists')) {
+            console.log(`  ⚠ Meal already exists for ${locale}, skipping...`);
+          } else {
+            throw createError;
+          }
+        }
+      }
     } catch (error) {
       // If meal already exists, try to find it
       if (error.message.includes('409') || error.message.includes('already exists')) {
@@ -492,15 +796,77 @@ async function createMeal(meal, categoryIdMap, tagIdMap) {
   return mealIds.en || mealIds['en'];
 }
 
+// Fetch all existing ingredients and build a map by English name
+async function fetchExistingIngredients() {
+  const ingredientMap = {};
+  try {
+    console.log('  📋 Fetching existing ingredients...');
+    const result = await strapiRequest('GET', '/ingredients', null, 'en');
+    if (result.data && Array.isArray(result.data)) {
+      for (const ing of result.data) {
+        const attrs = ing.attributes || ing;
+        const name = attrs.name || '';
+        if (name) {
+          const key = name.toLowerCase().replace(/\s+/g, '-');
+          ingredientMap[key] = ing.id;
+        }
+      }
+      console.log(`  ✓ Found ${Object.keys(ingredientMap).length} existing ingredients`);
+    }
+  } catch (error) {
+    console.log(`  ⚠ Could not fetch existing ingredients: ${error.message}`);
+  }
+  return ingredientMap;
+}
+
 // Main execution
 async function main() {
   console.log('🚀 Starting Strapi population script...\n');
   console.log(`📍 Target: ${STRAPI_URL}`);
   
   try {
-    // Step 1: Create categories
+    // Step 0: Fetch existing ingredients to avoid duplicates
     console.log('\n═══════════════════════════════════════');
-    console.log('STEP 1: Creating Categories');
+    console.log('STEP 0: Checking Existing Ingredients');
+    console.log('═══════════════════════════════════════');
+    const existingIngredientMap = await fetchExistingIngredients();
+    
+    // Step 1: Create ingredients
+    console.log('\n═══════════════════════════════════════');
+    console.log('STEP 1: Creating Ingredients');
+    console.log('═══════════════════════════════════════');
+    
+    const ingredientIdMap = {};
+    const allIngredients = [...defaultIngredients, ...optionalIngredients];
+    for (const ingredient of allIngredients) {
+      const ingredientKey = ingredient.name.en.toLowerCase().replace(/\s+/g, '-');
+      
+      // Check if ingredient already exists
+      if (existingIngredientMap[ingredientKey]) {
+        console.log(`\n🥄 Ingredient "${ingredient.name.en}" already exists (ID: ${existingIngredientMap[ingredientKey]}), skipping creation...`);
+        ingredientIdMap[ingredientKey] = existingIngredientMap[ingredientKey];
+        continue;
+      }
+      
+      // Try to create the ingredient
+      const ingredientId = await createIngredient(ingredient);
+      if (ingredientId) {
+        ingredientIdMap[ingredientKey] = ingredientId;
+      } else {
+        console.warn(`  ⚠ Could not get ID for ingredient "${ingredient.name.en}", it may already exist`);
+        // Try to fetch it again
+        const updatedMap = await fetchExistingIngredients();
+        if (updatedMap[ingredientKey]) {
+          ingredientIdMap[ingredientKey] = updatedMap[ingredientKey];
+        }
+      }
+      // Add delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Step 2: Create categories
+    console.log('\n═══════════════════════════════════════');
+    console.log('STEP 2: Creating Categories');
     console.log('═══════════════════════════════════════');
     
     const categoryIdMap = {};
@@ -511,9 +877,9 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    // Step 2: Create tags
+    // Step 3: Create tags
     console.log('\n═══════════════════════════════════════');
-    console.log('STEP 2: Creating Tags');
+    console.log('STEP 3: Creating Tags');
     console.log('═══════════════════════════════════════');
     
     const tagIdMap = {};
@@ -525,21 +891,34 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    // Step 3: Create meals
+    // Step 4: Create banners
     console.log('\n═══════════════════════════════════════');
-    console.log('STEP 3: Creating Meals');
+    console.log('STEP 4: Creating Banners');
+    console.log('═══════════════════════════════════════');
+    
+    for (const banner of banners) {
+      await createBanner(banner);
+      // Add delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Step 5: Create meals
+    console.log('\n═══════════════════════════════════════');
+    console.log('STEP 5: Creating Meals');
     console.log('═══════════════════════════════════════');
     
     for (const meal of meals) {
-      await createMeal(meal, categoryIdMap, tagIdMap);
+      await createMeal(meal, categoryIdMap, tagIdMap, ingredientIdMap);
       // Add delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 500));
     }
     
     console.log('\n✅ Population complete!');
     console.log(`\n📊 Summary:`);
+    console.log(`   - Ingredients: ${allIngredients.length}`);
     console.log(`   - Categories: ${categories.length}`);
     console.log(`   - Tags: ${tags.length}`);
+    console.log(`   - Banners: ${banners.length}`);
     console.log(`   - Meals: ${meals.length}`);
     
   } catch (error) {
@@ -550,4 +929,3 @@ async function main() {
 
 // Run the script
 main();
-
