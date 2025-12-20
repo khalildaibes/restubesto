@@ -6,6 +6,7 @@ import { STRAPI_URL } from './strapi'
 import type { Category } from '@/types/domain/Category'
 import type { Meal } from '@/types/domain/Meal'
 import type { Banner } from '@/types/domain/Banner'
+import type { Ingredient } from '@/types/domain/Ingredient'
 import type { MultilingualText } from '@/types/domain/MultilingualText'
 
 /**
@@ -265,6 +266,70 @@ export function transformMeal(strapiMeal: any, locale: string = 'en'): Meal {
     }
   }
 
+  // Transform ingredients - split into default and optional based on isDefault
+  const defaultIngredients: Ingredient[] = []
+  const optionalIngredients: Ingredient[] = []
+  
+  // Log ingredients data structure for debugging
+  if (typeof window !== 'undefined') {
+    console.log('🔍 Meal ingredients data:', {
+      mealId: strapiMeal.id,
+      mealName: attrs.name,
+      hasIngredients: !!attrs.ingredients,
+      ingredientsType: typeof attrs.ingredients,
+      ingredientsKeys: attrs.ingredients ? Object.keys(attrs.ingredients) : [],
+      hasData: !!attrs.ingredients?.data,
+      dataIsArray: Array.isArray(attrs.ingredients?.data),
+      dataLength: Array.isArray(attrs.ingredients?.data) ? attrs.ingredients.data.length : 0,
+      rawIngredients: attrs.ingredients,
+    })
+  }
+  
+  // Handle different possible structures: ingredients.data (relation) or ingredients (direct array)
+  let ingredientsArray: any[] = []
+  if (attrs.ingredients) {
+    if (attrs.ingredients.data && Array.isArray(attrs.ingredients.data)) {
+      // Strapi relation format: { data: [...] }
+      ingredientsArray = attrs.ingredients.data
+    } else if (Array.isArray(attrs.ingredients)) {
+      // Direct array format
+      ingredientsArray = attrs.ingredients
+    }
+  }
+  
+  ingredientsArray.forEach((ingredient: any) => {
+    const ingAttrs = ingredient.attributes || ingredient
+    const ingredientName: MultilingualText = {
+      en: locale === 'en' ? (ingAttrs.name || '') : '',
+      he: locale === 'he' ? (ingAttrs.name || '') : '',
+      ar: locale === 'ar' ? (ingAttrs.name || '') : '',
+    }
+    
+    const transformedIngredient: Ingredient = {
+      id: String(ingredient.id),
+      name: ingredientName,
+      price: ingAttrs.price || 0,
+      isDefault: ingAttrs.isDefault || false,
+    }
+    
+    if (transformedIngredient.isDefault) {
+      defaultIngredients.push(transformedIngredient)
+    } else {
+      optionalIngredients.push(transformedIngredient)
+    }
+  })
+  
+  // Log transformed ingredients
+  if (typeof window !== 'undefined') {
+    console.log('✅ Transformed ingredients:', {
+      mealId: strapiMeal.id,
+      defaultCount: defaultIngredients.length,
+      optionalCount: optionalIngredients.length,
+      defaultIngredients,
+      optionalIngredients,
+    })
+  }
+
   return {
     id: String(strapiMeal.id),
     categorySlug,
@@ -274,7 +339,8 @@ export function transformMeal(strapiMeal: any, locale: string = 'en'): Meal {
     imageUrl,
     calories: attrs.calories || undefined,
     tags: tags.length > 0 ? tags : undefined,
-    // Ingredients would be transformed similarly if needed
+    defaultIngredients: defaultIngredients.length > 0 ? defaultIngredients : undefined,
+    optionalIngredients: optionalIngredients.length > 0 ? optionalIngredients : undefined,
   }
 }
 

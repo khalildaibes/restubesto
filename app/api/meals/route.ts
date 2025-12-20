@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     // Images are stored in 'imageUrl' text field instead
     const params: Record<string, string> = {
       locale: finalLocale,
+      'populate[ingredients]': '*', // Populate ingredients relation
       // Note: Strapi by default only returns published content
       // If you need unpublished content, add: 'publicationState': 'preview'
     }
@@ -54,6 +55,11 @@ export async function GET(request: NextRequest) {
         id: data.data[0]?.id,
         hasAttributes: !!data.data[0]?.attributes,
         attributesKeys: data.data[0]?.attributes ? Object.keys(data.data[0].attributes) : [],
+        hasIngredients: !!data.data[0]?.ingredients,
+        ingredientsType: typeof data.data[0]?.ingredients,
+        ingredientsKeys: data.data[0]?.ingredients ? Object.keys(data.data[0].ingredients) : [],
+        hasIngredientsData: !!data.data[0]?.ingredients?.data,
+        ingredientsDataLength: Array.isArray(data.data[0]?.ingredients?.data) ? data.data[0].ingredients.data.length : 0,
       } : null,
     })
     
