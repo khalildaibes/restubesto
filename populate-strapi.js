@@ -29,7 +29,7 @@ if (majorVersion < 18) {
 }
 
 const STRAPI_URL = 'http://46.101.178.174:1337';
-const API_TOKEN = 'ffe2eca12673af4f9098bce1b76f928a5df7302f93c96ebd975918cf8da919e335a574c665c14bef702ab830c0d5fec09e1e0b6966c5d5080625a4334c57b0b9058b011c44ca5f42cb894098da8f06e54131177102e2e26a3cb20e74f3187c8ab6ef0ecc52653e52db088b80b5ca509606794f655978a6e515c79ecdab69271';
+const API_TOKEN = '125e0e32ce40a943c2390b5aa6d946b9de45b9e8314cfeec5b26471a6b8a8098ee7b34f70b805a6dc7cd4a7f2db5e8ac3fdf6b535cbea8e33d0a80ef91892029dd721d841beee8112c71e4bd75475ed19efd2b89e10f068677f485b43dbb160a051c79bc32c70dbf77b343f00bc4e023324b2fcaa6ab8ede4c3f7649a70daa31';
 
 // Data from mock files (converted from TypeScript to JavaScript)
 const defaultIngredients = [

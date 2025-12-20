@@ -3,11 +3,13 @@
  */
 
 import type { Category } from '@/types/domain/Category'
+import type { Drink } from '@/types/domain/Drink'
 import type { Meal } from '@/types/domain/Meal'
 import type { Banner } from '@/types/domain/Banner'
 import type { Language } from '@/types/i18n'
 import {
   transformCategories,
+  transformDrinks,
   transformMeals,
   transformBanners,
 } from './strapi-transformers'
@@ -54,6 +56,45 @@ export async function fetchCategories(locale: string = 'en'): Promise<Category[]
     return transformed
   } catch (error) {
     console.error('❌ Error fetching categories:', error)
+    return []
+  }
+}
+
+/**
+ * Fetch drinks from API
+ */
+export async function fetchDrinks(
+  locale: string = 'en',
+  categorySlug?: string
+): Promise<Drink[]> {
+  try {
+    let url = `/api/drinks?locale=${locale}`
+    if (categorySlug) {
+      url += `&category=${categorySlug}`
+    }
+    
+    console.log('📡 [CLIENT] Fetching drinks:', url)
+    const response = await fetch(url)
+    
+    if (!response.ok) {
+      console.error('❌ Drinks API error:', response.status, response.statusText)
+      throw new Error(`Failed to fetch drinks: ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    
+    // If no data or empty array, return empty array
+    if (!data?.data || data.data.length === 0) {
+      console.warn('⚠️ No drinks from API, returning empty array')
+      return []
+    }
+    
+    const transformed = transformDrinks(data, locale)
+    
+    // Return transformed data (even if empty)
+    return transformed
+  } catch (error) {
+    console.error('❌ Error fetching drinks:', error)
     return []
   }
 }

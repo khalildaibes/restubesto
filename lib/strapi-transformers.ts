@@ -4,6 +4,7 @@
 
 import { STRAPI_URL } from './strapi'
 import type { Category } from '@/types/domain/Category'
+import type { Drink } from '@/types/domain/Drink'
 import type { Meal } from '@/types/domain/Meal'
 import type { Banner } from '@/types/domain/Banner'
 import type { Ingredient } from '@/types/domain/Ingredient'
@@ -389,6 +390,57 @@ export function transformMeals(strapiResponse: any, locale: string = 'en'): Meal
     return []
   }
   return strapiResponse.data.map((item: any) => transformMeal(item, locale))
+}
+
+/**
+ * Transform Strapi drink response to Drink domain model
+ */
+export function transformDrink(strapiDrink: any, locale: string = 'en'): Drink {
+  const attrs = strapiDrink.attributes || strapiDrink
+  
+  // Strapi i18n returns data for the requested locale
+  const name: MultilingualText = {
+    en: locale === 'en' ? (attrs.name || '') : '',
+    he: locale === 'he' ? (attrs.name || '') : '',
+    ar: locale === 'ar' ? (attrs.name || '') : '',
+  }
+  
+  const description: MultilingualText | undefined = attrs.description ? {
+    en: locale === 'en' ? (attrs.description || '') : '',
+    he: locale === 'he' ? (attrs.description || '') : '',
+    ar: locale === 'ar' ? (attrs.description || '') : '',
+  } : undefined
+
+  // Get category slug
+  const categorySlug = attrs.categorySlug || ''
+
+  // Get image URL
+  let imageUrl = getImageUrl(attrs.image, attrs.imageUrl)
+  if (!imageUrl && attrs.imageUrl) {
+    imageUrl = typeof attrs.imageUrl === 'string' ? attrs.imageUrl.trim() : ''
+  }
+
+  return {
+    id: String(strapiDrink.id),
+    categorySlug,
+    name,
+    description,
+    price: attrs.price || 0,
+    imageUrl: imageUrl || '',
+    calories: attrs.calories || undefined,
+    volume: attrs.volume || undefined,
+    available: attrs.available !== undefined ? attrs.available : true,
+  }
+}
+
+/**
+ * Transform array of Strapi drinks
+ */
+export function transformDrinks(strapiResponse: any, locale: string = 'en'): Drink[] {
+  if (!strapiResponse?.data || !Array.isArray(strapiResponse.data)) {
+    return []
+  }
+  return strapiResponse.data.map((item: any) => transformDrink(item, locale))
 }
 
 /**

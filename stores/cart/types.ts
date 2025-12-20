@@ -4,12 +4,16 @@ export interface CartItemIngredient {
   price: number
 }
 
+export type CartItemType = 'meal' | 'drink'
+
 export interface CartItem {
-  mealId: string
+  type: CartItemType
+  mealId?: string // For meals
+  drinkId?: string // For drinks
   name: string
   price: number
   imageUrl: string
   qty: number
-  selectedIngredients?: CartItemIngredient[]
+  selectedIngredients?: CartItemIngredient[] // Only for meals
 }
 
