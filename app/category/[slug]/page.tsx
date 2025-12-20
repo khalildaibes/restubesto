@@ -7,10 +7,12 @@ import { useLanguageStore } from '@/stores/language'
 import { useTranslations } from '@/shared/i18n'
 import { Header } from '@/shared/components/layout/Header'
 import { MealCard } from '@/features/meals/components/MealCard'
+import { DrinkCard } from '@/features/drinks/components/DrinkCard'
 import { MealDetailModal } from '@/features/meals/components/MealDetailModal'
 import { CartDrawer } from '@/features/cart/components/CartDrawer'
-import { fetchCategoryBySlug, fetchMeals } from '@/lib/api-client'
+import { fetchCategoryBySlug, fetchMeals, fetchDrinks } from '@/lib/api-client'
 import type { Meal } from '@/types/domain'
+import type { Drink } from '@/types/domain'
 import type { Category } from '@/types/domain/Category'
 import { BackButton } from './BackButton'
 
@@ -24,6 +26,7 @@ export default function CategoryPage({
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null)
   const [category, setCategory] = useState<Category | null>(null)
   const [categoryMeals, setCategoryMeals] = useState<Meal[]>([])
+  const [categoryDrinks, setCategoryDrinks] = useState<Drink[]>([])
   const [loading, setLoading] = useState(true)
   const { language } = useLanguageStore()
   const t = useTranslations()
@@ -31,9 +34,10 @@ export default function CategoryPage({
   useEffect(() => {
     async function loadData() {
       setLoading(true)
-      const [categoryData, mealsData] = await Promise.all([
+      const [categoryData, mealsData, drinksData] = await Promise.all([
         fetchCategoryBySlug(params.slug, language),
         fetchMeals(language, params.slug),
+        fetchDrinks(language, params.slug),
       ])
       
       if (!categoryData) {
@@ -43,6 +47,7 @@ export default function CategoryPage({
       
       setCategory(categoryData)
       setCategoryMeals(mealsData)
+      setCategoryDrinks(drinksData)
       setLoading(false)
     }
     loadData()
@@ -81,16 +86,47 @@ export default function CategoryPage({
         <p className="text-gray-600 mb-8">
           {getText(category.description, language)}
         </p>
-        <div className="space-y-4">
-          {categoryMeals.map((meal, index) => (
-            <MealCard
-              key={meal.id}
-              meal={meal}
-              onClick={() => setSelectedMeal(meal)}
-              index={index}
-            />
-          ))}
-        </div>
+        
+        {/* Meals Section */}
+        {categoryMeals.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Meals</h2>
+            <div className="space-y-4">
+              {categoryMeals.map((meal, index) => (
+                <MealCard
+                  key={meal.id}
+                  meal={meal}
+                  onClick={() => setSelectedMeal(meal)}
+                  index={index}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Drinks Section */}
+        {categoryDrinks.length > 0 && (
+          <div>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Drinks</h2>
+            <div className="space-y-4">
+              {categoryDrinks.map((drink, index) => (
+                <DrinkCard
+                  key={drink.id}
+                  drink={drink}
+                  onClick={() => {}}
+                  index={index}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Empty State */}
+        {categoryMeals.length === 0 && categoryDrinks.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No items found in this category.</p>
+          </div>
+        )}
       </div>
       <MealDetailModal
         meal={selectedMeal}

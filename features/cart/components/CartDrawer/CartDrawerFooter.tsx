@@ -54,21 +54,42 @@ export function CartDrawerFooter() {
 
       // Build order items with defaultIngredients and selectedIngredients
       const orderItems = items.map((item) => {
-        const meal = mealsMap.get(item.mealId)
-        const defaultIngredients = meal?.defaultIngredients?.map(ing => ({
-          id: ing.id,
-          name: getText(ing.name, language),
-          price: ing.price,
-        })) || []
+        // Determine item type - handle legacy items without type field
+        const itemType = item.type || (item.drinkId ? 'drink' : 'meal')
+        
+        if (itemType === 'drink' && item.drinkId) {
+          // Handle drinks
+          return {
+            type: 'drink' as const,
+            drinkId: item.drinkId,
+            drinkName: item.name,
+            quantity: item.qty,
+            unitPrice: item.price,
+            totalPrice: item.price * item.qty,
+          }
+        } else if (itemType === 'meal' && item.mealId) {
+          // Handle meals
+          const meal = mealsMap.get(item.mealId)
+          const defaultIngredients = meal?.defaultIngredients?.map(ing => ({
+            id: ing.id,
+            name: getText(ing.name, language),
+            price: ing.price,
+          })) || []
 
-        return {
-          mealId: item.mealId,
-          mealName: item.name,
-          quantity: item.qty,
-          unitPrice: item.price - (item.selectedIngredients?.reduce((sum, ing) => sum + ing.price, 0) || 0), // Base price without selected ingredients
-          totalPrice: item.price * item.qty,
-          defaultIngredients,
-          selectedIngredients: item.selectedIngredients || [],
+          return {
+            type: 'meal' as const,
+            mealId: item.mealId,
+            mealName: item.name,
+            quantity: item.qty,
+            unitPrice: item.price - (item.selectedIngredients?.reduce((sum, ing) => sum + ing.price, 0) || 0), // Base price without selected ingredients
+            totalPrice: item.price * item.qty,
+            defaultIngredients,
+            selectedIngredients: item.selectedIngredients || [],
+          }
+        } else {
+          // Fallback - log error details for debugging
+          console.error('Invalid cart item:', item)
+          throw new Error(`Invalid cart item type: ${itemType}, mealId: ${item.mealId}, drinkId: ${item.drinkId}`)
         }
       })
 
@@ -310,6 +331,29 @@ export function CartDrawerFooter() {
     )
   }
 
+  // Check if cart has any drinks
+  const hasDrinks = items.some(item => item.type === 'drink')
+  const hasMeals = items.some(item => item.type === 'meal')
+
+  const handleCheckoutClick = () => {
+    // If cart has meals but no drinks, prompt user
+    if (hasMeals && !hasDrinks) {
+      const wantsDrinks = confirm('Would you like to add a drink to your order?')
+      if (wantsDrinks) {
+        // Navigate to drinks page - find first drink category or show all drinks
+        // For now, we'll just show the checkout form, but you can navigate to /category/soft-drinks
+        // window.location.href = '/category/soft-drinks'
+        // Or you could show a drinks selection modal
+        // For simplicity, we'll just proceed to checkout
+        setShowCheckoutForm(true)
+      } else {
+        setShowCheckoutForm(true)
+      }
+    } else {
+      setShowCheckoutForm(true)
+    }
+  }
+
   return (
     <div className="p-6 border-t border-gray-100 bg-white">
       <div className="flex items-center justify-between mb-4">
@@ -320,8 +364,25 @@ export function CartDrawerFooter() {
           ₪{getSubtotal().toFixed(2)}
         </span>
       </div>
+      {hasMeals && !hasDrinks && (
+        <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800 mb-2">
+            💡 Would you like to add a drink to your order?
+          </p>
+          <Button
+            onClick={() => {
+              // Navigate to first drink category
+              window.location.href = '/category/soft-drinks'
+            }}
+            variant="secondary"
+            className="w-full py-2 text-sm"
+          >
+            Browse Drinks
+          </Button>
+        </div>
+      )}
       <Button
-        onClick={() => setShowCheckoutForm(true)}
+        onClick={handleCheckoutClick}
         className="w-full py-4 text-lg"
       >
         {t.cart.checkout}

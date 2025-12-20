@@ -6,18 +6,23 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export interface OrderItem {
-  mealId: string
-  mealName: string
+  type: 'meal' | 'drink'
+  // For meals
+  mealId?: string
+  mealName?: string
+  // For drinks
+  drinkId?: string
+  drinkName?: string
   quantity: number
   unitPrice: number
   totalPrice: number
-  // Default ingredients that come with the meal (always included)
+  // Default ingredients that come with the meal (always included) - only for meals
   defaultIngredients?: Array<{
     id: string
     name: string
     price: number
   }>
-  // Optional ingredients that the customer selected (added for extra cost)
+  // Optional ingredients that the customer selected (added for extra cost) - only for meals
   selectedIngredients?: Array<{
     id: string
     name: string

@@ -7,10 +7,14 @@
  * - Node.js 18+ (for native fetch support)
  * - Strapi server running
  * - Valid API token with create permissions
+ * - Drinks collection must be created in Strapi first (see STRAPI_DRINKS_SETUP.md)
  * 
  * This script will:
  * 1. Create drink categories (soft-drinks, hot-beverages, alcoholic)
- * 2. Create drinks (3 soft drinks, 3 hot drinks, 3 alcoholic drinks)
+ * 2. Create drinks (4 soft drinks, 3 hot drinks, 3 alcoholic drinks)
+ * 
+ * IMPORTANT: Before running this script, you must create the Drinks collection in Strapi!
+ * Follow the instructions in STRAPI_DRINKS_SETUP.md to set up the collection first.
  * 
  * Note: The script checks for existing entries before creating to avoid duplicates.
  */
@@ -272,7 +276,18 @@ async function uploadImageToStrapi(imageUrl) {
     // Create form data
     const formData = new FormData();
     const blob = new Blob([imageBuffer], { type: imageBlob.type });
-    const fileName = imageUrl.split('/').pop() || 'image.jpg';
+    
+    // Clean filename - remove query parameters and invalid characters
+    let fileName = imageUrl.split('/').pop() || 'image.jpg';
+    // Remove query parameters (everything after ?)
+    fileName = fileName.split('?')[0];
+    // Remove invalid characters and ensure it has a valid extension
+    fileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    // If no extension, add .jpg
+    if (!fileName.includes('.')) {
+      fileName = `image_${Date.now()}.jpg`;
+    }
+    
     formData.append('files', blob, fileName);
     
     // Upload to Strapi
@@ -406,56 +421,112 @@ async function createDrink(drink) {
   // Create drink for each locale
   for (const locale of ['en', 'he', 'ar']) {
     try {
-      // Check if drink already exists
-      const existing = await strapiRequest('GET', `/drinks?filters[slug][$eq]=${drink.slug}`, null, locale);
+      // Use the working endpoint (tested in main)
+      const endpoint = global.drinksEndpoint || '/drinks';
+      
+      // Check if drink already exists (try by name if slug filter doesn't work)
+      let existing = null;
+      try {
+        existing = await strapiRequest('GET', `${endpoint}?filters[slug][$eq]=${drink.slug}`, null, locale);
+      } catch (e) {
+        // If slug filter doesn't work, try by name
+        try {
+          existing = await strapiRequest('GET', `${endpoint}?filters[name][$eq]=${encodeURIComponent(drink.name[locale])}`, null, locale);
+        } catch (e2) {
+          // If both fail, continue (drink probably doesn't exist)
+        }
+      }
       if (existing.data && existing.data.length > 0) {
         drinkIds[locale] = existing.data[0].id;
         console.log(`  ⚠ Drink ${drink.slug} already exists for ${locale} (ID: ${existing.data[0].id}), skipping...`);
         continue;
       }
       
+      // Build data object with required fields
+      // Build data object matching your Strapi collection fields
+      // Required fields: name, description, categorySlug, price, imageUrl
       const data = {
         name: drink.name[locale],
-        slug: drink.slug,
         description: drink.description[locale] || '',
         categorySlug: drink.categorySlug,
         price: drink.price,
-        calories: drink.calories || null,
-        volume: drink.volume || null,
-        imageUrl: drink.imageUrl || null,
+        imageUrl: drink.imageUrl || '', // Required field - must not be null
         available: true,
         publishedAt: new Date().toISOString(),
       };
       
-      // Add image if available
-      if (imageId) {
-        data.image = imageId;
+      // Optional fields
+      if (drink.calories !== undefined && drink.calories !== null) {
+        data.calories = drink.calories;
       }
+      
+      // Note: slug and volume fields are not included as they don't exist in your collection
+      // tags field exists but we're not setting it in this script
       
       let result;
       try {
-        result = await strapiRequest('POST', '/drinks', data, locale);
+        result = await strapiRequest('POST', endpoint, data, locale);
         drinkIds[locale] = result.data.id;
         console.log(`  ✓ Created ${locale} version (ID: ${result.data.id})`);
       } catch (createError) {
+        // Handle "Invalid key" errors - fields that don't exist in collection
+        if (createError.message.includes('Invalid key')) {
+          const invalidField = createError.message.match(/Invalid key (\w+)/)?.[1] || 'unknown';
+          console.error(`  ✗ Error: ${createError.message}`);
+          console.error(`     The '${invalidField}' field doesn't exist in your Drinks collection.`);
+          if (invalidField === 'slug' || invalidField === 'volume') {
+            console.error(`     This is normal - these fields are not in your collection.`);
+            console.error(`     The script has been updated to exclude these fields.`);
+          }
+          // Continue to next locale instead of failing completely
+          continue;
+        }
+        // Check if it's a 404 - collection doesn't exist or wrong endpoint
+        else if (createError.message.includes('404') || createError.message.includes('Not Found')) {
+          console.error(`\n❌ ERROR: Drinks collection endpoint not found!`);
+          console.error(`\n📋 Possible issues:`);
+          console.error(`   1. Collection name mismatch: The script uses '/drink' (singular)`);
+          console.error(`      If your collection is named 'drinks' (plural), the endpoint should be '/drinks'`);
+          console.error(`   2. Collection not created: Create the Drinks collection in Strapi first`);
+          console.error(`   3. Strapi not restarted: After creating the collection, restart Strapi`);
+          console.error(`\n   Check your Strapi collection name and update the script accordingly.`);
+          console.error(`   For detailed instructions, see: STRAPI_DRINKS_SETUP.md\n`);
+          // Throw a special error that will stop execution
+          throw new Error('DRINKS_COLLECTION_NOT_FOUND');
+        }
         // If image field format failed, try without image
-        if (createError.message.includes('Invalid key image') && imageId) {
+        else if (createError.message.includes('Invalid key image') && imageId) {
           console.log(`  ⚠ Trying without image for ${locale}...`);
           const dataNoImage = { ...data };
           delete dataNoImage.image;
-          result = await strapiRequest('POST', '/drinks', dataNoImage, locale);
+          result = await strapiRequest('POST', endpoint, dataNoImage, locale);
           drinkIds[locale] = result.data.id;
           console.log(`  ✓ Created ${locale} version without image (ID: ${result.data.id})`);
         } else {
-          throw createError;
+          console.error(`  ✗ Failed to create drink for ${locale}: ${createError.message}`);
+          // Continue to next locale instead of stopping
         }
       }
     } catch (error) {
+      // If it's the special error, re-throw to stop execution
+      if (error.message === 'DRINKS_COLLECTION_NOT_FOUND') {
+        throw error;
+      }
       // If drink already exists, try to find it
       if (error.message.includes('409') || error.message.includes('already exists') || error.message.includes('unique')) {
         console.log(`  ⚠ Drink ${drink.slug} already exists for ${locale}, trying to fetch...`);
         try {
-          const existing = await strapiRequest('GET', `/drinks?filters[slug][$eq]=${drink.slug}`, null, locale);
+          // Try to find existing drink by name
+          try {
+            existing = await strapiRequest('GET', `${endpoint}?filters[name][$eq]=${encodeURIComponent(drink.name[locale])}`, null, locale);
+          } catch (e) {
+            // If that fails, try by slug
+            try {
+              existing = await strapiRequest('GET', `${endpoint}?filters[slug][$eq]=${drink.slug}`, null, locale);
+            } catch (e2) {
+              // Both failed
+            }
+          }
           if (existing.data && existing.data.length > 0) {
             drinkIds[locale] = existing.data[0].id;
             console.log(`  ✓ Found existing ${locale} version (ID: ${existing.data[0].id})`);
@@ -472,6 +543,33 @@ async function createDrink(drink) {
   return drinkIds.en || drinkIds['en'];
 }
 
+// Test if drinks endpoint exists
+async function testDrinksEndpoint() {
+  console.log('🔍 Testing drinks endpoint...');
+  try {
+    // Try both singular and plural
+    const endpoints = ['/drink', '/drinks'];
+    for (const endpoint of endpoints) {
+      try {
+        const response = await strapiRequest('GET', `${endpoint}?pagination[limit]=1`, null, 'en');
+        console.log(`  ✓ Endpoint ${endpoint} is accessible`);
+        return endpoint;
+      } catch (error) {
+        if (!error.message.includes('404')) {
+          // If it's not a 404, the endpoint exists but might have permission issues
+          console.log(`  ⚠ Endpoint ${endpoint} exists but returned: ${error.message}`);
+          return endpoint;
+        }
+      }
+    }
+    console.log('  ✗ Neither /drink nor /drinks endpoints are accessible');
+    return null;
+  } catch (error) {
+    console.log(`  ✗ Error testing endpoint: ${error.message}`);
+    return null;
+  }
+}
+
 // Main execution
 async function main() {
   console.log('🚀 Starting drinks population script...\n');
@@ -479,6 +577,28 @@ async function main() {
   console.log(`🔑 Using API token: ${API_TOKEN.substring(0, 20)}...\n`);
   
   try {
+    // Test endpoint first
+    const workingEndpoint = await testDrinksEndpoint();
+    if (!workingEndpoint) {
+      console.error('\n❌ ERROR: Drinks collection endpoint not accessible!');
+      console.error('\n📋 Possible solutions:');
+      console.error('   1. Restart Strapi server after creating the collection');
+      console.error('   2. Check API permissions in Strapi:');
+      console.error('      - Go to Settings → Users & Permissions Plugin → Roles');
+      console.error('      - Select "Public" or "Authenticated" role');
+      console.error('      - Find "drink" (or "drinks") in the list');
+      console.error('      - Enable "find" and "create" permissions');
+      console.error('   3. Verify collection name matches endpoint');
+      console.error('      - Collection name "drink" → endpoint "/api/drink"');
+      console.error('      - Collection name "drinks" → endpoint "/api/drinks"');
+      console.error('\n   After fixing, run this script again.\n');
+      process.exit(1);
+    }
+    
+    // Update endpoint in createDrink function
+    global.drinksEndpoint = workingEndpoint;
+    console.log(`\n✅ Using endpoint: ${workingEndpoint}\n`);
+    
     // Step 1: Create categories
     console.log('═══════════════════════════════════════════════════════════');
     console.log('STEP 1: Creating Drink Categories');
@@ -492,6 +612,8 @@ async function main() {
     console.log('\n═══════════════════════════════════════════════════════════');
     console.log('STEP 2: Creating Soft Drinks');
     console.log('═══════════════════════════════════════════════════════════');
+    console.log('⚠️  NOTE: If you get 404 errors, the Drinks collection needs to be created in Strapi first!');
+    console.log('    See STRAPI_DRINKS_SETUP.md for instructions.\n');
     
     for (const drink of softDrinks) {
       await createDrink(drink);
@@ -527,7 +649,10 @@ async function main() {
     console.log('\n');
     
   } catch (error) {
-    console.error('\n❌ Error during population:', error);
+    console.error('\n❌ Error during population:', error.message);
+    if (error.message.includes('Drinks collection does not exist')) {
+      console.error('\n💡 Once you create the Drinks collection in Strapi, run this script again.');
+    }
     process.exit(1);
   }
 }

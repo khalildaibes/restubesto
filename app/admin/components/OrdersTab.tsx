@@ -95,12 +95,37 @@ export function OrdersTab() {
     }
   }
 
-  const parseItems = (itemsJson: string) => {
-    try {
-      return JSON.parse(itemsJson)
-    } catch {
+  const parseItems = (itemsJson: string | any[] | null | undefined) => {
+    // Debug logging
+    console.log('parseItems input:', itemsJson, 'type:', typeof itemsJson, 'isArray:', Array.isArray(itemsJson))
+    
+    // If items is already an array, return it
+    if (Array.isArray(itemsJson)) {
+      console.log('Returning array directly:', itemsJson)
+      return itemsJson
+    }
+    
+    // If items is null or undefined, return empty array
+    if (!itemsJson) {
+      console.log('Items is null/undefined, returning empty array')
       return []
     }
+    
+    // If items is a string, try to parse it
+    if (typeof itemsJson === 'string') {
+      try {
+        const parsed = JSON.parse(itemsJson)
+        console.log('Parsed string to:', parsed)
+        return Array.isArray(parsed) ? parsed : []
+      } catch (e) {
+        console.error('Failed to parse items string:', e)
+        return []
+      }
+    }
+    
+    // Fallback: return empty array
+    console.log('Fallback: returning empty array')
+    return []
   }
 
   if (loading) {
@@ -160,21 +185,35 @@ export function OrdersTab() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       <div className="max-w-xs">
-                        {items.map((item: any, idx: number) => (
-                          <div key={idx} className="mb-1">
-                            <div className="font-medium">{item.quantity}x {item.mealName}</div>
-                            {item.defaultIngredients && item.defaultIngredients.length > 0 && (
-                              <div className="text-xs text-gray-500 ml-2">
-                                Default: {item.defaultIngredients.map((ing: any) => ing.name).join(', ')}
+                        {items.length === 0 ? (
+                          <span className="text-gray-400 italic">No items</span>
+                        ) : (
+                          items.map((item: any, idx: number) => {
+                            const itemName = item.type === 'drink' ? item.drinkName : item.mealName
+                            const itemType = item.type || (item.drinkId ? 'drink' : 'meal')
+                            
+                            return (
+                              <div key={idx} className="mb-1">
+                                <div className="font-medium">
+                                  {item.quantity}x {itemName || 'Unknown Item'}
+                                  {itemType === 'drink' && (
+                                    <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Drink</span>
+                                  )}
+                                </div>
+                                {itemType === 'meal' && item.defaultIngredients && item.defaultIngredients.length > 0 && (
+                                  <div className="text-xs text-gray-500 ml-2">
+                                    Default: {item.defaultIngredients.map((ing: any) => ing.name).join(', ')}
+                                  </div>
+                                )}
+                                {itemType === 'meal' && item.selectedIngredients && item.selectedIngredients.length > 0 && (
+                                  <div className="text-xs text-blue-600 ml-2">
+                                    +Added: {item.selectedIngredients.map((ing: any) => ing.name).join(', ')}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            {item.selectedIngredients && item.selectedIngredients.length > 0 && (
-                              <div className="text-xs text-blue-600 ml-2">
-                                +Added: {item.selectedIngredients.map((ing: any) => ing.name).join(', ')}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                            )
+                          })
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -251,48 +290,72 @@ export function OrdersTab() {
               <div>
                 <h4 className="font-semibold mb-2">Order Items</h4>
                 <div className="bg-gray-50 p-3 rounded">
-                  {parseItems(selectedOrder.items).map((item: any, idx: number) => (
-                    <div key={idx} className="mb-3 pb-3 border-b last:border-0">
-                      <div className="font-medium">{item.quantity}x {item.mealName}</div>
-                      <div className="text-sm text-gray-600">₪{item.unitPrice.toFixed(2)} each</div>
+                  {(() => {
+                    const items = parseItems(selectedOrder.items)
+                    if (items.length === 0) {
+                      return <p className="text-gray-400 italic">No items in this order</p>
+                    }
+                    return items.map((item: any, idx: number) => {
+                      const itemType = item.type || (item.drinkId ? 'drink' : 'meal')
+                      const itemName = itemType === 'drink' ? item.drinkName : item.mealName
                       
-                      {/* Default Ingredients (included with meal) */}
-                      {item.defaultIngredients && item.defaultIngredients.length > 0 && (
-                        <div className="mt-2 text-sm">
-                          <strong className="text-gray-700">Default Ingredients (included):</strong>
-                          <ul className="list-disc list-inside ml-2 mt-1">
-                            {item.defaultIngredients.map((ing: any, ingIdx: number) => (
-                              <li key={ingIdx} className="text-gray-600">
-                                {ing.name} {ing.price > 0 ? `(₪${ing.price.toFixed(2)})` : '(free)'}
-                              </li>
-                            ))}
-                          </ul>
+                      return (
+                        <div key={idx} className="mb-3 pb-3 border-b last:border-0">
+                          <div className="font-medium flex items-center gap-2">
+                            {item.quantity}x {itemName || 'Unknown Item'}
+                            {itemType === 'drink' && (
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Drink</span>
+                            )}
+                            {itemType === 'meal' && (
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Meal</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600">₪{item.unitPrice.toFixed(2)} each</div>
+                          
+                          {/* Only show ingredients for meals */}
+                          {itemType === 'meal' && (
+                            <>
+                              {/* Default Ingredients (included with meal) */}
+                              {item.defaultIngredients && item.defaultIngredients.length > 0 && (
+                                <div className="mt-2 text-sm">
+                                  <strong className="text-gray-700">Default Ingredients (included):</strong>
+                                  <ul className="list-disc list-inside ml-2 mt-1">
+                                    {item.defaultIngredients.map((ing: any, ingIdx: number) => (
+                                      <li key={ingIdx} className="text-gray-600">
+                                        {ing.name} {ing.price > 0 ? `(₪${ing.price.toFixed(2)})` : '(free)'}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              
+                              {/* Selected Optional Ingredients (customer added) */}
+                              {item.selectedIngredients && item.selectedIngredients.length > 0 && (
+                                <div className="mt-2 text-sm">
+                                  <strong className="text-blue-700">Added Ingredients (+extra cost):</strong>
+                                  <ul className="list-disc list-inside ml-2 mt-1">
+                                    {item.selectedIngredients.map((ing: any, ingIdx: number) => (
+                                      <li key={ingIdx} className="text-blue-600">
+                                        {ing.name} (+₪{ing.price.toFixed(2)})
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              
+                              {/* Show if no ingredients at all */}
+                              {(!item.defaultIngredients || item.defaultIngredients.length === 0) &&
+                               (!item.selectedIngredients || item.selectedIngredients.length === 0) && (
+                                <div className="mt-1 text-xs text-gray-400 italic">No ingredients specified</div>
+                              )}
+                            </>
+                          )}
+                          
+                          <div className="text-sm font-medium mt-2">Subtotal: ₪{item.totalPrice.toFixed(2)}</div>
                         </div>
-                      )}
-                      
-                      {/* Selected Optional Ingredients (customer added) */}
-                      {item.selectedIngredients && item.selectedIngredients.length > 0 && (
-                        <div className="mt-2 text-sm">
-                          <strong className="text-blue-700">Added Ingredients (+extra cost):</strong>
-                          <ul className="list-disc list-inside ml-2 mt-1">
-                            {item.selectedIngredients.map((ing: any, ingIdx: number) => (
-                              <li key={ingIdx} className="text-blue-600">
-                                {ing.name} (+₪{ing.price.toFixed(2)})
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      
-                      {/* Show if no ingredients at all */}
-                      {(!item.defaultIngredients || item.defaultIngredients.length === 0) &&
-                       (!item.selectedIngredients || item.selectedIngredients.length === 0) && (
-                        <div className="mt-1 text-xs text-gray-400 italic">No ingredients specified</div>
-                      )}
-                      
-                      <div className="text-sm font-medium mt-2">Subtotal: ₪{item.totalPrice.toFixed(2)}</div>
-                    </div>
-                  ))}
+                      )
+                    })
+                  })()}
                 </div>
               </div>
 

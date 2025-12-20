@@ -15,17 +15,39 @@ interface CartItemCardProps {
 
 export function CartItemCard({ item, onEdit }: CartItemCardProps) {
   const updateQty = useCartStore((state) => state.updateQty)
+  const updateDrinkQty = useCartStore((state) => state.updateDrinkQty)
   const removeItem = useCartStore((state) => state.removeItem)
+  const removeDrink = useCartStore((state) => state.removeDrink)
 
   const handleRemove = () => {
     if (confirm('Remove this item from cart?')) {
-      removeItem(item.mealId, item.selectedIngredients)
+      if (item.type === 'drink' && item.drinkId) {
+        removeDrink(item.drinkId)
+      } else if (item.type === 'meal' && item.mealId) {
+        removeItem(item.mealId, item.selectedIngredients)
+      }
     }
   }
 
   const handleEdit = () => {
     if (onEdit) {
       onEdit(item)
+    }
+  }
+
+  const handleDecrease = () => {
+    if (item.type === 'drink' && item.drinkId) {
+      updateDrinkQty(item.drinkId, item.qty - 1)
+    } else if (item.type === 'meal' && item.mealId) {
+      updateQty(item.mealId, item.qty - 1, item.selectedIngredients)
+    }
+  }
+
+  const handleIncrease = () => {
+    if (item.type === 'drink' && item.drinkId) {
+      updateDrinkQty(item.drinkId, item.qty + 1)
+    } else if (item.type === 'meal' && item.mealId) {
+      updateQty(item.mealId, item.qty + 1, item.selectedIngredients)
     }
   }
 
@@ -38,12 +60,8 @@ export function CartItemCard({ item, onEdit }: CartItemCardProps) {
       <div className="flex flex-col items-end gap-2 flex-shrink-0">
         <CartItemQuantity
           value={item.qty}
-          onDecrease={() =>
-            updateQty(item.mealId, item.qty - 1, item.selectedIngredients)
-          }
-          onIncrease={() =>
-            updateQty(item.mealId, item.qty + 1, item.selectedIngredients)
-          }
+          onDecrease={handleDecrease}
+          onIncrease={handleIncrease}
         />
         <div className="flex gap-1.5">
           {onEdit && (

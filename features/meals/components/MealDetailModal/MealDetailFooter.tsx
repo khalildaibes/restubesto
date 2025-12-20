@@ -45,6 +45,7 @@ export function MealDetailFooter({ meal, onClose, onUpdate }: MealDetailFooterPr
       })) || []
 
     const itemToAdd = {
+      type: 'meal' as const,
       mealId: meal.id,
       name: getText(meal.name, language),
       price: meal.price + optionalTotal, // Total price including selected ingredients
