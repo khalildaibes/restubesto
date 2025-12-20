@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react'
 import { OrdersTab } from './components/OrdersTab'
 import { MealsTab } from './components/MealsTab'
 import { IngredientsTab } from './components/IngredientsTab'
+import { CategoriesTab } from './components/CategoriesTab'
 import { LoginForm } from './components/LoginForm'
 import { LanguageSwitcher } from '@/features/language/components/LanguageSwitcher'
 
-type Tab = 'orders' | 'meals' | 'ingredients'
+type Tab = 'orders' | 'meals' | 'categories' | 'ingredients'
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('orders')
@@ -84,6 +85,16 @@ export default function AdminDashboard() {
                 Meals
               </button>
               <button
+                onClick={() => setActiveTab('categories')}
+                className={`${
+                  activeTab === 'categories'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              >
+                Categories
+              </button>
+              <button
                 onClick={() => setActiveTab('ingredients')}
                 className={`${
                   activeTab === 'ingredients'
@@ -102,6 +113,7 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'orders' && <OrdersTab />}
         {activeTab === 'meals' && <MealsTab />}
+        {activeTab === 'categories' && <CategoriesTab />}
         {activeTab === 'ingredients' && <IngredientsTab />}
       </div>
     </div>
