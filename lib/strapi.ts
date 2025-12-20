@@ -97,13 +97,21 @@ export async function fetchFromStrapi(
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
     
-    const headers = {
-      ...getStrapiHeaders(),
-      ...options.headers,
+    const baseHeaders = getStrapiHeaders()
+    const additionalHeaders = options.headers || {}
+    
+    // Convert Headers object to plain object if needed
+    const additionalHeadersObj = additionalHeaders instanceof Headers
+      ? Object.fromEntries(additionalHeaders.entries())
+      : (additionalHeaders as Record<string, string>)
+    
+    const headers: Record<string, string> = {
+      ...baseHeaders,
+      ...additionalHeadersObj,
     }
     
     // Log headers (without full token for security)
-    const authHeader = headers['Authorization'] || headers['authorization'] || ''
+    const authHeader = headers['Authorization'] || ''
     console.log('📤 Strapi Request Headers:', {
       hasAuth: !!authHeader,
       authPrefix: authHeader.substring(0, 20),
