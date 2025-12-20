@@ -96,18 +96,13 @@ export function OrdersTab() {
   }
 
   const parseItems = (itemsJson: string | any[] | null | undefined) => {
-    // Debug logging
-    console.log('parseItems input:', itemsJson, 'type:', typeof itemsJson, 'isArray:', Array.isArray(itemsJson))
-    
     // If items is already an array, return it
     if (Array.isArray(itemsJson)) {
-      console.log('Returning array directly:', itemsJson)
       return itemsJson
     }
     
     // If items is null or undefined, return empty array
     if (!itemsJson) {
-      console.log('Items is null/undefined, returning empty array')
       return []
     }
     
@@ -115,16 +110,13 @@ export function OrdersTab() {
     if (typeof itemsJson === 'string') {
       try {
         const parsed = JSON.parse(itemsJson)
-        console.log('Parsed string to:', parsed)
         return Array.isArray(parsed) ? parsed : []
-      } catch (e) {
-        console.error('Failed to parse items string:', e)
+      } catch {
         return []
       }
     }
     
     // Fallback: return empty array
-    console.log('Fallback: returning empty array')
     return []
   }
 

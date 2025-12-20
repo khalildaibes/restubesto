@@ -22,8 +22,20 @@ export function CartDrawerContent({ onClose }: CartDrawerContentProps) {
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null)
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null)
   const removeItem = useCartStore((state) => state.removeItem)
+  const removeDrink = useCartStore((state) => state.removeDrink)
 
   const handleEditItem = async (cartItem: CartItem) => {
+    // Only allow editing meals (drinks don't have ingredients to customize)
+    if (cartItem.type === 'drink') {
+      alert('Drinks cannot be edited. Please remove and add again if needed.')
+      return
+    }
+
+    if (!cartItem.mealId) {
+      alert('Invalid cart item')
+      return
+    }
+
     try {
       // Fetch meals to get the full meal data
       const meals = await fetchMeals(language)
@@ -49,7 +61,11 @@ export function CartDrawerContent({ onClose }: CartDrawerContentProps) {
   const handleMealUpdated = () => {
     // Remove the old cart item when meal is updated
     if (editingCartItem) {
-      removeItem(editingCartItem.mealId, editingCartItem.selectedIngredients)
+      if (editingCartItem.type === 'meal' && editingCartItem.mealId) {
+        removeItem(editingCartItem.mealId, editingCartItem.selectedIngredients)
+      } else if (editingCartItem.type === 'drink' && editingCartItem.drinkId) {
+        removeDrink(editingCartItem.drinkId)
+      }
     }
     handleCloseMealModal()
   }
