@@ -3,7 +3,7 @@ import { LanguageProvider } from '@/features/language/components/LanguageProvide
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Sushi-na - Restaurant Menu',
+  title: 'מסעדת אלזיין - Restaurant Menu',
   description: 'Digital restaurant menu',
 }
 

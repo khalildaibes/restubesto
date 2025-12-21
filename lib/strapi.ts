@@ -2,10 +2,10 @@
  * Strapi API configuration and utilities
  */
 
-export const STRAPI_URL = process.env.STRAPI_URL || 'http://46.101.178.174:1337'
+export const STRAPI_URL = process.env.STRAPI_URL || 'http://46.101.178.174:1339'
 // Use environment variable if set, otherwise use the token from populate script
 // Make sure this token has READ permissions for categories, meals, banners, tags, ingredients
-export const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN || '125e0e32ce40a943c2390b5aa6d946b9de45b9e8314cfeec5b26471a6b8a8098ee7b34f70b805a6dc7cd4a7f2db5e8ac3fdf6b535cbea8e33d0a80ef91892029dd721d841beee8112c71e4bd75475ed19efd2b89e10f068677f485b43dbb160a051c79bc32c70dbf77b343f00bc4e023324b2fcaa6ab8ede4c3f7649a70daa31'
+export const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN || 'a21102545606697fbc52a039f91bbe373f9689a4cc3144488422f0a346f29018b80f91cbdc2fe39cda8105b8c6c81f2972bd4bace6934bfbc6330e66e6ff209122a1fe26d8bec3faa0354f940e6ee002266c27710dc34042ff6b835b0006c9bd6a850b83fbcd1b81c5c601292b95cff51ed444144ab2950c4f0b146e4b7a7217'
 
 // Validate token on module load
 if (!STRAPI_API_TOKEN || STRAPI_API_TOKEN.length < 20) {

@@ -16,7 +16,7 @@ export function Header({ onCartClick }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Sushi-na</h1>
+        <h1 className="text-xl font-semibold text-gray-900">מסעדת אלזיין</h1>
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
           <CartButton onClick={onCartClick} itemCount={totalItems} />

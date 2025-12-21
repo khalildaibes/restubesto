@@ -131,7 +131,7 @@ This document outlines all the Strapi collections (Content Types) needed to mana
 **Purpose**: Site-wide configuration and settings
 
 **Fields**:
-- `restaurantName` (Text - Short text) - **i18n enabled** (e.g., "Sushi-na")
+- `restaurantName` (Text - Short text) - **i18n enabled** (e.g., "מסעדת אלזיין")
 - `restaurantDescription` (Text - Long text, optional) - **i18n enabled**
 - `logo` (Media - Single media, optional) - Restaurant logo
 - `currency` (Text - Short text) - Currency symbol (default: "₪")

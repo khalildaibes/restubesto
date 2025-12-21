@@ -1,4 +1,4 @@
-# Sushi-na Restaurant Menu
+# מסעדת אלזיין Restaurant Menu
 
 A simple, sleek restaurant menu web app built with Next.js 14, TypeScript, Tailwind CSS, and Framer Motion.
 
