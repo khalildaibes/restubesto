@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const params: Record<string, string> = {
       locale,
       'populate[ingredients]': '*',
+      'publicationState': 'preview', // Include both published and unpublished meals for admin
     }
 
     const data = await fetchFromStrapi('/meals', {
@@ -38,26 +39,54 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    const mealData = {
+    // Log the incoming request for debugging
+    console.log('📝 Creating meal with data:', {
+      name: body.name,
+      categorySlug: body.categorySlug,
+      hasIngredients: !!body.ingredients,
+      ingredientsCount: Array.isArray(body.ingredients) ? body.ingredients.length : 0,
+      hasTags: !!body.tags,
+      tagsCount: Array.isArray(body.tags) ? body.tags.length : 0,
+    })
+    
+    const mealData: any = {
       name: body.name,
       description: body.description,
       price: body.price,
       calories: body.calories || null,
       categorySlug: body.categorySlug,
       imageUrl: body.imageUrl || null,
-      ingredients: body.ingredients || [], // Array of ingredient IDs
-      tags: body.tags || [], // Array of tag IDs
       available: body.available !== undefined ? body.available : true,
       publishedAt: new Date().toISOString(),
+    }
+
+    // Only include ingredients if provided and not empty
+    if (body.ingredients && Array.isArray(body.ingredients) && body.ingredients.length > 0) {
+      mealData.ingredients = body.ingredients
+    }
+
+    // Only include tags if provided and not empty
+    if (body.tags && Array.isArray(body.tags) && body.tags.length > 0) {
+      mealData.tags = body.tags
     }
 
     const locale = body.locale || 'en'
     const params: Record<string, string> = { locale }
 
+    console.log('📤 Sending to Strapi:', {
+      mealData,
+      locale,
+    })
+
     const data = await fetchFromStrapi('/meals', {
       method: 'POST',
       body: JSON.stringify({ data: mealData }),
     }, params)
+    
+    console.log('✅ Meal created successfully:', {
+      mealId: data.data?.id,
+      documentId: data.data?.documentId,
+    })
     
     return NextResponse.json(
       { 
@@ -68,11 +97,16 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('Error creating meal:', error)
+    console.error('❌ Error creating meal:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Error details:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    })
     return NextResponse.json(
       { 
         error: 'Failed to create meal', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
+        message: errorMessage
       },
       { status: 500 }
     )

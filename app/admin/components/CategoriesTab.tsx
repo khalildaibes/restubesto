@@ -99,6 +99,12 @@ export function CategoriesTab() {
       
       const method = editingCategory ? 'PUT' : 'POST'
 
+      console.log('📤 Sending category data:', {
+        url,
+        method,
+        payload,
+      })
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -107,19 +113,28 @@ export function CategoriesTab() {
         body: JSON.stringify(payload),
       })
 
-      if (response.ok) {
+      const result = await response.json()
+      console.log('📥 Response:', {
+        ok: response.ok,
+        status: response.status,
+        result,
+      })
+
+      if (response.ok && result.success) {
         await fetchCategories()
         setEditingCategory(null)
         setIsCreating(false)
         setImageFile(null)
         setImagePreview('')
       } else {
-        const error = await response.json()
-        alert(`Failed to save category: ${error.message || 'Unknown error'}`)
+        const errorMessage = result.message || result.error || 'Unknown error'
+        console.error('❌ Failed to save category:', errorMessage)
+        alert(`Failed to save category: ${errorMessage}`)
       }
     } catch (error) {
-      console.error('Error saving category:', error)
-      alert('Failed to save category')
+      console.error('❌ Error saving category:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to save category: ${errorMessage}`)
     }
   }
 
@@ -395,4 +410,5 @@ function CategoryForm({ category, imagePreview, onSave, onCancel, onImageChange,
     </div>
   )
 }
+
 

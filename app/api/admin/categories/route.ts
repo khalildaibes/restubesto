@@ -37,6 +37,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
+    // Log the incoming request for debugging
+    console.log('📝 Creating category with data:', {
+      name: body.name,
+      slug: body.slug,
+      hasImage: !!body.imageUrl,
+    })
+    
     const categoryData = {
       name: body.name,
       slug: body.slug,
@@ -48,10 +55,20 @@ export async function POST(request: NextRequest) {
     const locale = body.locale || 'en'
     const params: Record<string, string> = { locale }
 
+    console.log('📤 Sending to Strapi:', {
+      categoryData,
+      locale,
+    })
+
     const data = await fetchFromStrapi('/categories', {
       method: 'POST',
       body: JSON.stringify({ data: categoryData }),
     }, params)
+    
+    console.log('✅ Category created successfully:', {
+      categoryId: data.data?.id,
+      documentId: data.data?.documentId,
+    })
     
     return NextResponse.json(
       { 
@@ -62,14 +79,20 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('Error creating category:', error)
+    console.error('❌ Error creating category:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Error details:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    })
     return NextResponse.json(
       { 
         error: 'Failed to create category', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
+        message: errorMessage
       },
       { status: 500 }
     )
   }
 }
+
 

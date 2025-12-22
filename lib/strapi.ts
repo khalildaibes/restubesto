@@ -95,7 +95,179 @@ export function buildStrapiUrl(endpoint: string, params?: Record<string, string>
 }
 
 /**
- * Fetch from Strapi API with error handling
+ * Fetch a single page from Strapi API
+ */
+async function fetchStrapiPage(
+  endpoint: string,
+  options: RequestInit,
+  params: Record<string, string> | undefined,
+  skipLocale: boolean,
+  page: number = 1,
+  pageSize: number = 25
+): Promise<any> {
+  // Only add pagination params for GET requests to collection endpoints (not single items)
+  const httpMethod = options.method || 'GET'
+  const isGetRequest = httpMethod.toUpperCase() === 'GET'
+  const isDeleteRequest = httpMethod.toUpperCase() === 'DELETE'
+  
+  // Check if this is a collection endpoint (e.g., /meals) or single item endpoint (e.g., /meals/123)
+  // Single item endpoints have an ID at the end: /collection/id
+  // Pattern: endpoint ends with something that looks like an ID (long alphanumeric string)
+  const hasIdInPath = endpoint.match(/\/([a-zA-Z0-9_-]{15,}|[0-9]+)$/)
+  const isCollectionEndpoint = !hasIdInPath
+  
+  // Create pagination params (only for GET requests to collection endpoints)
+  const paginationParams: Record<string, string> = (isGetRequest && isCollectionEndpoint) ? {
+    'pagination[page]': String(page),
+    'pagination[pageSize]': String(pageSize),
+  } : {}
+
+  // Merge with existing params
+  const allParams = {
+    ...params,
+    ...paginationParams,
+  }
+
+  const url = buildStrapiUrl(endpoint, allParams, skipLocale)
+  
+  // Create abort controller for timeout
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+  
+  const baseHeaders = getStrapiHeaders()
+  const additionalHeaders = options.headers || {}
+  
+  // Convert Headers object to plain object if needed
+  const additionalHeadersObj = additionalHeaders instanceof Headers
+    ? Object.fromEntries(additionalHeaders.entries())
+    : (additionalHeaders as Record<string, string>)
+  
+  const headers: Record<string, string> = {
+    ...baseHeaders,
+    ...additionalHeadersObj,
+  }
+  
+  // Log request details for DELETE
+  if (isDeleteRequest) {
+    console.log('📤 DELETE Request Details:', {
+      url,
+      method: httpMethod,
+      hasAuth: !!headers.Authorization,
+      endpoint,
+    })
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    signal: controller.signal,
+  })
+  
+  clearTimeout(timeoutId)
+
+  // Log response details for DELETE requests BEFORE checking response.ok
+  if (isDeleteRequest) {
+    console.log('📋 DELETE Response Details:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      url,
+      contentType: response.headers.get('content-type'),
+      contentLength: response.headers.get('content-length'),
+    })
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    let errorData
+    try {
+      errorData = errorText ? JSON.parse(errorText) : { message: response.statusText }
+    } catch {
+      errorData = { message: errorText || response.statusText }
+    }
+    
+    const errorMessage = errorData?.error?.message || errorData?.message || response.statusText
+    
+    // Special handling for 401 errors
+    if (response.status === 401) {
+      const tokenPreview = STRAPI_API_TOKEN ? `${STRAPI_API_TOKEN.substring(0, 20)}...` : 'MISSING'
+      console.error('❌ Strapi API Authentication Error (401):', {
+        status: response.status,
+        url,
+        error: errorMessage,
+        tokenPreview,
+        tokenLength: STRAPI_API_TOKEN?.length || 0,
+        hasEnvVar: !!process.env.STRAPI_API_TOKEN,
+        suggestion: 'Check if the API token is valid and has READ permissions in Strapi admin',
+      })
+      throw new Error(
+        `Strapi API authentication failed (401): ${errorMessage}. Please verify the API token has READ permissions.`
+      )
+    }
+    
+    console.error('❌ Strapi API Error:', {
+      status: response.status,
+      statusText: response.statusText,
+      url,
+      error: errorMessage,
+      errorData,
+    })
+    throw new Error(
+      `Strapi API error (${response.status}): ${errorMessage}`
+    )
+  }
+
+  // Check if response has content before trying to parse JSON
+  // DELETE requests and some other operations may return empty responses
+  const contentType = response.headers.get('content-type') || ''
+  const contentLength = response.headers.get('content-length')
+  
+  // For DELETE requests with 200/204 status, or if content-length is 0, return empty object
+  if (isDeleteRequest && (response.status === 200 || response.status === 204)) {
+    console.log('✅ DELETE request succeeded (status 200/204), returning empty object')
+    return {}
+  }
+  
+  if (contentLength === '0' || response.status === 204) {
+    console.log('ℹ️ Empty response body (content-length: 0 or status 204), returning empty object')
+    return {}
+  }
+  
+  // Try to get the response text first (we can only read the body once)
+  const responseText = await response.text()
+  
+  // If response is empty, return empty object
+  if (!responseText || responseText.trim() === '') {
+    console.log('ℹ️ Empty response body text, returning empty object')
+    return {}
+  }
+  
+  // Try to parse as JSON
+  try {
+    return JSON.parse(responseText)
+  } catch (parseError) {
+    // If JSON parsing fails, log warning
+    console.warn('⚠️ Failed to parse JSON response:', {
+      status: response.status,
+      contentType,
+      textPreview: responseText.substring(0, 200),
+      error: parseError instanceof Error ? parseError.message : String(parseError),
+    })
+    
+    // For successful DELETE operations, return empty object even if parsing fails
+    if (isDeleteRequest && (response.status === 200 || response.status === 204)) {
+      console.log('ℹ️ DELETE request with parse error, returning empty object anyway')
+      return {}
+    }
+    
+    // For other operations, throw the error
+    throw new Error(`Failed to parse JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`)
+  }
+}
+
+/**
+ * Fetch from Strapi API with error handling and pagination support
+ * Automatically fetches all pages if pagination is present
  * Locale is always included in the request (matching populate script pattern)
  * 
  * @param skipLocale - If true, skip adding locale parameter (for non-i18n collections like orders)
@@ -106,105 +278,104 @@ export async function fetchFromStrapi(
   params?: Record<string, string>,
   skipLocale: boolean = false
 ) {
-  const url = buildStrapiUrl(endpoint, params, skipLocale)
-  
   try {
-    // Create abort controller for timeout
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+    const method = options.method || 'GET'
+    const isGetRequest = method.toUpperCase() === 'GET'
     
-    const baseHeaders = getStrapiHeaders()
-    const additionalHeaders = options.headers || {}
+    // Fetch first page
+    const firstPageData = await fetchStrapiPage(endpoint, options, params, skipLocale, 1, 25)
     
-    // Convert Headers object to plain object if needed
-    const additionalHeadersObj = additionalHeaders instanceof Headers
-      ? Object.fromEntries(additionalHeaders.entries())
-      : (additionalHeaders as Record<string, string>)
-    
-    const headers: Record<string, string> = {
-      ...baseHeaders,
-      ...additionalHeadersObj,
+    // Only handle pagination for GET requests
+    if (!isGetRequest) {
+      return firstPageData
     }
     
-    // Log headers (without full token for security)
-    const authHeader = headers['Authorization'] || ''
-    console.log('📤 Strapi Request Headers:', {
-      hasAuth: !!authHeader,
-      authPrefix: authHeader.substring(0, 20),
-      contentType: headers['Content-Type'],
-      allHeaderKeys: Object.keys(headers),
-    })
+    // Check if response has pagination metadata
+    const pagination = firstPageData?.meta?.pagination
+    const isPaginated = pagination && typeof pagination.page === 'number' && typeof pagination.pageCount === 'number'
     
-    const response = await fetch(url, {
-      ...options,
-      headers,
-      signal: controller.signal,
-    })
-    
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      let errorData
-      try {
-        errorData = JSON.parse(errorText)
-      } catch {
-        errorData = { message: errorText }
-      }
-      
-      const errorMessage = errorData?.error?.message || errorData?.message || response.statusText
-      
-      // Special handling for 401 errors
-      if (response.status === 401) {
-        const tokenPreview = STRAPI_API_TOKEN ? `${STRAPI_API_TOKEN.substring(0, 20)}...` : 'MISSING'
-        console.error('❌ Strapi API Authentication Error (401):', {
-          status: response.status,
-          url,
-          error: errorMessage,
-          tokenPreview,
-          tokenLength: STRAPI_API_TOKEN?.length || 0,
-          hasEnvVar: !!process.env.STRAPI_API_TOKEN,
-          suggestion: 'Check if the API token is valid and has READ permissions in Strapi admin',
-        })
-        throw new Error(
-          `Strapi API authentication failed (401): ${errorMessage}. Please verify the API token has READ permissions.`
-        )
-      }
-      
-      console.error('❌ Strapi API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        url,
-        error: errorMessage,
-        errorData,
-      })
-      throw new Error(
-        `Strapi API error (${response.status}): ${errorMessage}`
-      )
-    }
-
-    const responseData = await response.json()
-    
-    // Log successful response for debugging
-    console.log('✅ Strapi API Response:', {
-      endpoint,
-      url,
-      hasData: !!responseData?.data,
-      dataLength: Array.isArray(responseData?.data) ? responseData.data.length : responseData?.data ? 1 : 0,
-      dataType: Array.isArray(responseData?.data) ? 'array' : typeof responseData?.data,
-      responseKeys: Object.keys(responseData || {}),
-    })
-    
-    // Check if response is null or empty
-    if (!responseData || (responseData.data === null || responseData.data === undefined)) {
-      console.warn('⚠️ Strapi returned null or undefined data:', {
+    // If not paginated or only one page, return as-is
+    if (!isPaginated || pagination.pageCount <= 1) {
+      console.log('✅ Strapi API Response (single page):', {
         endpoint,
-        url,
-        responseData,
+        hasData: !!firstPageData?.data,
+        dataLength: Array.isArray(firstPageData?.data) ? firstPageData.data.length : firstPageData?.data ? 1 : 0,
+        dataType: Array.isArray(firstPageData?.data) ? 'array' : typeof firstPageData?.data,
+        pagination: pagination || 'none',
       })
+      
+      // Check if response is null or empty
+      if (!firstPageData || (firstPageData.data === null || firstPageData.data === undefined)) {
+        console.warn('⚠️ Strapi returned null or undefined data:', {
+          endpoint,
+          firstPageData,
+        })
+      }
+      
+      return firstPageData
     }
     
-    return responseData
+    // If paginated and has multiple pages, fetch all pages
+    const currentPage = pagination.page || 1
+    const pageCount = pagination.pageCount || 1
+    const pageSize = pagination.pageSize || 25
+    
+    console.log('📄 Fetching paginated data:', {
+      endpoint,
+      currentPage,
+      pageCount,
+      pageSize,
+      total: pagination.total,
+    })
+    
+    // Collect all data from first page
+    const allData: any[] = Array.isArray(firstPageData.data) ? [...firstPageData.data] : []
+    
+    // Fetch remaining pages
+    let page = currentPage + 1
+    while (page <= pageCount) {
+      console.log(`📄 Fetching page ${page} of ${pageCount}...`)
+      
+      try {
+        const pageData = await fetchStrapiPage(endpoint, options, params, skipLocale, page, pageSize)
+        
+        if (pageData?.data && Array.isArray(pageData.data)) {
+          allData.push(...pageData.data)
+          console.log(`✅ Fetched page ${page}/${pageCount}, items: ${pageData.data.length}, total so far: ${allData.length}`)
+        } else {
+          console.warn(`⚠️ Page ${page} returned invalid data structure`)
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching page ${page}:`, error)
+        // Continue with next page even if one fails
+      }
+      
+      page++
+    }
+    
+    // Combine all pages into a single response
+    const combinedResponse = {
+      ...firstPageData,
+      data: allData,
+      meta: {
+        ...firstPageData.meta,
+        pagination: {
+          ...pagination,
+          page: 1, // Reset to page 1 since we combined all pages
+          pageCount: 1, // Now it's a single "page" with all data
+          pageSize: allData.length, // Total items
+        },
+      },
+    }
+    
+    console.log('✅ Strapi API Response (all pages combined):', {
+      endpoint,
+      totalPages: pageCount,
+      totalItems: allData.length,
+      dataType: 'array',
+    })
+    
+    return combinedResponse
   } catch (error) {
     // Handle network errors, timeouts, etc.
     if (error instanceof Error) {

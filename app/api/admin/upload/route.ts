@@ -28,6 +28,13 @@ export async function POST(request: NextRequest) {
 
       const result = await uploadImageToStrapi(file)
       
+      console.log('✅ Image uploaded successfully:', {
+        id: result.id,
+        url: result.url,
+        name: result.name,
+        size: result.size,
+      })
+      
       return NextResponse.json(
         {
           success: true,
@@ -70,4 +77,5 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
 

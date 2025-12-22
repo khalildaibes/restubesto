@@ -53,29 +53,56 @@ export function MealsTab() {
       const data = await response.json()
       
       if (data.data && Array.isArray(data.data)) {
-        const mealsList = data.data.map((item: any) => {
-          const attrs = item.attributes || item
-          // Use documentId if available (Strapi v5 i18n), otherwise use id
-          const documentId = item.documentId || item.id
-          return {
-            id: String(documentId),
-            name: attrs.name || '',
-            description: attrs.description || '',
-            price: attrs.price || 0,
-            calories: attrs.calories,
-            categorySlug: attrs.categorySlug || '',
-            imageUrl: attrs.imageUrl || '',
-            ingredients: attrs.ingredients?.data?.map((ing: any) => {
-              // Use documentId for ingredient relations too
-              return ing.documentId || ing.id
-            }) || [],
-            tags: attrs.tags?.data?.map((tag: any) => {
-              // Use documentId for tag relations too
-              return tag.documentId || tag.id
-            }) || [],
-            available: attrs.available !== undefined ? attrs.available : true,
-          }
-        })
+        const totalMeals = data.data.length
+        const mealsList = data.data
+          .filter((item: any) => {
+            // Filter out unpublished meals (deleted meals)
+            const attrs = item.attributes || item
+            const publishedAt = attrs.publishedAt
+            const isPublished = publishedAt !== null && publishedAt !== undefined
+            
+            // Log for debugging
+            if (!isPublished) {
+              console.log('🚫 Filtering out unpublished meal:', {
+                id: item.id,
+                documentId: item.documentId,
+                name: attrs.name,
+                publishedAt,
+                publishedAtType: typeof publishedAt,
+              })
+            }
+            
+            return isPublished
+          })
+          .map((item: any) => {
+            const attrs = item.attributes || item
+            // Use documentId if available (Strapi v5 i18n), otherwise use id
+            const documentId = item.documentId || item.id
+            return {
+              id: String(documentId),
+              name: attrs.name || '',
+              description: attrs.description || '',
+              price: attrs.price || 0,
+              calories: attrs.calories,
+              categorySlug: attrs.categorySlug || '',
+              imageUrl: attrs.imageUrl || '',
+              ingredients: attrs.ingredients?.data?.map((ing: any) => {
+                // Use documentId for ingredient relations too
+                return ing.documentId || ing.id
+              }) || [],
+              tags: attrs.tags?.data?.map((tag: any) => {
+                // Use documentId for tag relations too
+                return tag.documentId || tag.id
+              }) || [],
+              available: attrs.available !== undefined ? attrs.available : true,
+            }
+          })
+        
+        const filteredCount = mealsList.length
+        if (totalMeals !== filteredCount) {
+          console.log(`📊 Filtered meals: ${totalMeals} total, ${filteredCount} published, ${totalMeals - filteredCount} unpublished`)
+        }
+        
         setMeals(mealsList)
       }
     } catch (error) {
@@ -127,9 +154,18 @@ export function MealsTab() {
   }
 
   const handleImageUpload = async (): Promise<string | null> => {
-    if (!imageFile) return null
+    if (!imageFile) {
+      console.log('⚠️ No image file provided for upload')
+      return null
+    }
 
     try {
+      console.log('📤 Uploading image file:', {
+        name: imageFile.name,
+        size: imageFile.size,
+        type: imageFile.type,
+      })
+
       const formData = new FormData()
       formData.append('file', imageFile)
 
@@ -139,33 +175,75 @@ export function MealsTab() {
       })
 
       const data = await response.json()
+      console.log('📥 Upload response:', {
+        success: data.success,
+        hasImage: !!data.image,
+        imageUrl: data.image?.url,
+        fullResponse: data,
+      })
+
       if (data.success && data.image?.url) {
+        console.log('✅ Image uploaded successfully, URL:', data.image.url)
         return data.image.url
+      } else {
+        console.error('❌ Image upload failed or no URL returned:', data)
+        return null
       }
-      return null
     } catch (error) {
-      console.error('Error uploading image:', error)
+      console.error('❌ Error uploading image:', error)
       return null
     }
   }
 
   const handleSave = async (mealData: Partial<Meal>) => {
     try {
-      let imageUrl = mealData.imageUrl || ''
+      console.log('💾 Starting save process:', {
+        hasImageFile: !!imageFile,
+        currentImageUrl: mealData.imageUrl,
+        editingMeal: !!editingMeal,
+        mealId: editingMeal?.id,
+      })
 
-      // Upload image if a new file was selected
+      let imageUrl: string | undefined = mealData.imageUrl
+
+      // Upload image if a new file was selected (this overrides the existing imageUrl)
       if (imageFile) {
+        console.log('📎 Image file detected, uploading...')
         const uploadedUrl = await handleImageUpload()
         if (uploadedUrl) {
           imageUrl = uploadedUrl
+          console.log('✅ New image uploaded and set as imageUrl:', uploadedUrl)
+        } else {
+          console.warn('⚠️ Image upload failed, keeping existing imageUrl:', imageUrl)
         }
+      } else {
+        console.log('ℹ️ No new image file selected, preserving existing imageUrl:', imageUrl)
       }
 
-    const payload = {
-      ...mealData,
-      imageUrl,
+    const payload: any = {
+      name: mealData.name,
+      description: mealData.description,
+      price: mealData.price,
+      calories: mealData.calories,
+      categorySlug: mealData.categorySlug,
       available: mealData.available !== undefined ? mealData.available : true,
       locale: language,
+    }
+
+    // Always include imageUrl if it has a value (preserve existing or use new)
+    if (imageUrl !== undefined && imageUrl !== null && imageUrl !== '') {
+      payload.imageUrl = imageUrl
+      console.log('📸 Including imageUrl in payload:', imageUrl)
+    } else {
+      console.warn('⚠️ No imageUrl to include in payload (undefined, null, or empty)')
+    }
+
+    // Only include ingredients/tags if they exist
+    if (mealData.ingredients && Array.isArray(mealData.ingredients)) {
+      payload.ingredients = mealData.ingredients
+    }
+    if (mealData.tags && Array.isArray(mealData.tags)) {
+      payload.tags = mealData.tags
     }
 
       const url = editingMeal 
@@ -173,6 +251,17 @@ export function MealsTab() {
         : '/api/admin/meals'
       
       const method = editingMeal ? 'PUT' : 'POST'
+
+      console.log('📤 Sending meal data to API:', {
+        url,
+        method,
+        payload: { 
+          ...payload, 
+          imageUrl: payload.imageUrl, // Always log the actual imageUrl
+          ingredients: payload.ingredients?.length || 0, 
+          tags: payload.tags?.length || 0 
+        },
+      })
 
       const response = await fetch(url, {
         method,
@@ -182,19 +271,28 @@ export function MealsTab() {
         body: JSON.stringify(payload),
       })
 
-      if (response.ok) {
+      const result = await response.json()
+      console.log('📥 Response:', {
+        ok: response.ok,
+        status: response.status,
+        result,
+      })
+
+      if (response.ok && result.success) {
         await fetchMeals()
         setEditingMeal(null)
         setIsCreating(false)
         setImageFile(null)
         setImagePreview('')
       } else {
-        const error = await response.json()
-        alert(`Failed to save meal: ${error.message || 'Unknown error'}`)
+        const errorMessage = result.message || result.error || 'Unknown error'
+        console.error('❌ Failed to save meal:', errorMessage)
+        alert(`Failed to save meal: ${errorMessage}`)
       }
     } catch (error) {
-      console.error('Error saving meal:', error)
-      alert('Failed to save meal')
+      console.error('❌ Error saving meal:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to save meal: ${errorMessage}`)
     }
   }
 
@@ -202,18 +300,37 @@ export function MealsTab() {
     if (!confirm('Are you sure you want to delete this meal?')) return
 
     try {
+      console.log('🗑️ Deleting meal:', mealId)
       const response = await fetch(`/api/admin/meals/${mealId}`, {
         method: 'DELETE',
       })
 
-      if (response.ok) {
+      console.log('📥 Delete response:', {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText,
+      })
+
+      const data = await response.json()
+      console.log('📦 Delete response data:', data)
+
+      if (response.ok && data.success) {
+        console.log('✅ Meal deleted successfully, refreshing list...')
         await fetchMeals()
       } else {
-        alert('Failed to delete meal')
+        const errorMessage = data.message || data.error || 'Failed to delete meal'
+        console.error('❌ Delete failed:', {
+          status: response.status,
+          ok: response.ok,
+          data,
+          errorMessage,
+        })
+        alert(`Failed to delete meal: ${errorMessage}`)
       }
     } catch (error) {
-      console.error('Error deleting meal:', error)
-      alert('Failed to delete meal')
+      console.error('❌ Error deleting meal:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to delete meal: ${errorMessage}`)
     }
   }
 
@@ -351,6 +468,11 @@ interface MealFormProps {
 
 function MealForm({ meal, categories, ingredients, imagePreview, onSave, onCancel, onImageChange }: MealFormProps) {
   const [formData, setFormData] = useState<Partial<Meal>>(meal)
+
+  // Update formData when meal prop changes (e.g., when editing a different meal)
+  useEffect(() => {
+    setFormData(meal)
+  }, [meal])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

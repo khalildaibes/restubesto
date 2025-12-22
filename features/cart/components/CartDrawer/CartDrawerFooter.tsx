@@ -127,7 +127,6 @@ export function CartDrawerFooter() {
       const result = await response.json()
 
       if (response.ok && result.success) {
-        const orderNumber = result.order?.attributes?.orderNumber || result.order?.orderNumber || 'N/A'
         clearCart()
         setShowCheckoutForm(false)
         setFormData({
@@ -141,9 +140,6 @@ export function CartDrawerFooter() {
           deliveryFee: 0,
         })
         setQuickCheckout(true) // Reset to quick checkout mode
-        
-        // Redirect to order tracking page
-        window.location.href = `/order/${orderNumber}`
       } else {
         alert(`Failed to create order: ${result.error || result.message || 'Unknown error'}`)
       }
@@ -316,7 +312,7 @@ export function CartDrawerFooter() {
               disabled={isSubmitting || (quickCheckout ? !formData.customerPhone.trim() : !formData.customerName.trim())}
               className="flex-1 py-3"
             >
-              {isSubmitting ? 'Placing Order...' : 'Place Order'}
+              {isSubmitting ? 'Saving...' : 'Save'}
             </Button>
             <Button
               onClick={() => setShowCheckoutForm(false)}

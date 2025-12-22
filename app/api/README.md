@@ -388,3 +388,4 @@ export function CheckoutButton() {
 - All endpoints support internationalization via the `locale` parameter
 
 
+

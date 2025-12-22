@@ -43,25 +43,43 @@ export async function GET(request: NextRequest) {
       cache: 'no-store',
     }, params)
     
+    const mealsData = data?.data
+    const mealsArray = Array.isArray(mealsData) ? mealsData : []
+    
     console.log('📦 [API ROUTE] Meals response from Strapi:', {
       hasData: !!data,
       dataType: typeof data,
-      dataIsArray: Array.isArray(data?.data),
-      dataLength: Array.isArray(data?.data) ? data.data.length : data?.data ? 1 : 0,
-      dataIsNull: data?.data === null,
-      dataIsUndefined: data?.data === undefined,
+      dataIsArray: Array.isArray(mealsData),
+      dataLength: mealsArray.length,
+      dataIsNull: mealsData === null,
+      dataIsUndefined: mealsData === undefined,
       responseKeys: data ? Object.keys(data) : [],
-      firstItem: Array.isArray(data?.data) && data.data.length > 0 ? {
-        id: data.data[0]?.id,
-        hasAttributes: !!data.data[0]?.attributes,
-        attributesKeys: data.data[0]?.attributes ? Object.keys(data.data[0].attributes) : [],
-        hasIngredients: !!data.data[0]?.ingredients,
-        ingredientsType: typeof data.data[0]?.ingredients,
-        ingredientsKeys: data.data[0]?.ingredients ? Object.keys(data.data[0].ingredients) : [],
-        hasIngredientsData: !!data.data[0]?.ingredients?.data,
-        ingredientsDataLength: Array.isArray(data.data[0]?.ingredients?.data) ? data.data[0].ingredients.data.length : 0,
-      } : null,
+      pagination: data?.meta?.pagination,
     })
+
+    // Log each meal individually to see what we're getting
+    if (mealsArray.length > 0) {
+      console.log('📋 [API ROUTE] Individual meals from Strapi:')
+      mealsArray.forEach((meal: any, index: number) => {
+        const attrs = meal.attributes || meal
+        const mealId = meal.id || meal.documentId || 'unknown'
+        console.log(`  Meal ${index + 1}/${mealsArray.length} (ID: ${mealId}):`, {
+          id: mealId,
+          documentId: meal.documentId,
+          name: attrs.name,
+          categorySlug: attrs.categorySlug,
+          hasCategory: !!attrs.category,
+          categoryType: typeof attrs.category,
+          price: attrs.price,
+          available: attrs.available,
+          hasIngredients: !!attrs.ingredients,
+          ingredientsCount: attrs.ingredients?.data?.length || 0,
+          attributeKeys: attrs ? Object.keys(attrs) : [],
+        })
+      })
+    } else {
+      console.warn('⚠️ [API ROUTE] No meals in response array')
+    }
     
     // If data is null or undefined, return empty array
     if (!data || data.data === null || data.data === undefined) {

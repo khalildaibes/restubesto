@@ -202,6 +202,19 @@ export function transformCategory(strapiCategory: any, locale: string = 'en'): C
  */
 export function transformMeal(strapiMeal: any, locale: string = 'en'): Meal {
   const attrs = strapiMeal.attributes || strapiMeal
+  const mealId = strapiMeal.id || strapiMeal.documentId || 'unknown'
+  
+  console.log(`🔍 [TRANSFORM MEAL] Starting transformation for meal ID ${mealId}:`, {
+    mealId,
+    locale,
+    hasAttributes: !!attrs,
+    attributeKeys: attrs ? Object.keys(attrs) : [],
+    rawName: attrs?.name,
+    rawCategorySlug: attrs?.categorySlug,
+    hasCategory: !!attrs?.category,
+    categoryType: typeof attrs?.category,
+    categoryKeys: attrs?.category ? Object.keys(attrs.category) : [],
+  })
   
   // Strapi i18n returns data for the requested locale
   // When locale=ar, Strapi returns Arabic content; when locale=he, it returns Hebrew, etc.
@@ -217,10 +230,39 @@ export function transformMeal(strapiMeal: any, locale: string = 'en'): Meal {
     ar: locale === 'ar' ? (attrs.description || '') : '',
   }
 
-  // Get category slug
-  const categorySlug = attrs.category?.data?.attributes?.slug || 
-                       attrs.category?.attributes?.slug || 
-                       attrs.category?.slug || ''
+  // Get category slug - check multiple possible locations
+  let categorySlug = ''
+  
+  // First, try direct categorySlug field (most likely)
+  if (attrs.categorySlug && typeof attrs.categorySlug === 'string') {
+    categorySlug = attrs.categorySlug.trim()
+    console.log(`✅ [TRANSFORM MEAL] Found categorySlug in direct field for meal ${mealId}:`, categorySlug)
+  }
+  // Then try category relation
+  else if (attrs.category) {
+    categorySlug = attrs.category?.data?.attributes?.slug || 
+                   attrs.category?.attributes?.slug || 
+                   attrs.category?.slug || ''
+    if (categorySlug) {
+      console.log(`✅ [TRANSFORM MEAL] Found categorySlug from category relation for meal ${mealId}:`, categorySlug)
+    }
+  }
+  
+  if (!categorySlug) {
+    console.warn(`⚠️ [TRANSFORM MEAL] No categorySlug found for meal ${mealId}:`, {
+      mealId,
+      name: attrs.name,
+      hasCategorySlugField: !!attrs.categorySlug,
+      categorySlugValue: attrs.categorySlug,
+      hasCategory: !!attrs.category,
+      categoryStructure: attrs.category ? {
+        hasData: !!attrs.category.data,
+        hasAttributes: !!attrs.category.attributes,
+        hasSlug: !!attrs.category.slug,
+        keys: Object.keys(attrs.category),
+      } : null,
+    })
+  }
 
   // Transform tags if present
   const tags: MultilingualText[] = []
@@ -386,10 +428,99 @@ export function transformCategories(strapiResponse: any, locale: string = 'en'):
  * Transform array of Strapi meals
  */
 export function transformMeals(strapiResponse: any, locale: string = 'en'): Meal[] {
+  console.log('🔄 [TRANSFORM] Starting transformMeals:', {
+    locale,
+    hasData: !!strapiResponse?.data,
+    dataIsArray: Array.isArray(strapiResponse?.data),
+    dataLength: Array.isArray(strapiResponse?.data) ? strapiResponse.data.length : 0,
+  })
+
   if (!strapiResponse?.data || !Array.isArray(strapiResponse.data)) {
+    console.warn('⚠️ [TRANSFORM] Invalid strapiResponse.data, returning empty array:', {
+      hasData: !!strapiResponse?.data,
+      dataType: typeof strapiResponse?.data,
+      isArray: Array.isArray(strapiResponse?.data),
+    })
     return []
   }
-  return strapiResponse.data.map((item: any) => transformMeal(item, locale))
+
+  const meals: Meal[] = []
+  const failedMeals: Array<{ index: number; item: any; error: string }> = []
+
+  strapiResponse.data.forEach((item: any, index: number) => {
+    try {
+      console.log(`🔍 [TRANSFORM] Transforming meal ${index + 1}/${strapiResponse.data.length}:`, {
+        id: item.id || item.documentId,
+        hasAttributes: !!item.attributes,
+        attributeKeys: item.attributes ? Object.keys(item.attributes) : [],
+        rawName: item.attributes?.name || item.name,
+        rawCategorySlug: item.attributes?.categorySlug || item.categorySlug,
+      })
+
+      const transformedMeal = transformMeal(item, locale)
+      
+      // Check if meal has required fields
+      const hasName = transformedMeal.name && (
+        (transformedMeal.name.en && transformedMeal.name.en.trim()) ||
+        (transformedMeal.name.he && transformedMeal.name.he.trim()) ||
+        (transformedMeal.name.ar && transformedMeal.name.ar.trim())
+      )
+      const hasCategorySlug = transformedMeal.categorySlug && transformedMeal.categorySlug.trim()
+
+      console.log(`✅ [TRANSFORM] Meal ${index + 1} transformed successfully:`, {
+        id: transformedMeal.id,
+        name: transformedMeal.name,
+        categorySlug: transformedMeal.categorySlug,
+        hasName,
+        hasCategorySlug,
+        price: transformedMeal.price,
+        available: transformedMeal.available,
+      })
+
+      if (!hasName) {
+        console.warn(`⚠️ [TRANSFORM] Meal ${index + 1} (ID: ${transformedMeal.id}) has no name, but including it anyway`)
+      }
+
+      if (!hasCategorySlug) {
+        console.warn(`⚠️ [TRANSFORM] Meal ${index + 1} (ID: ${transformedMeal.id}) has no categorySlug:`, {
+          mealId: transformedMeal.id,
+          name: transformedMeal.name,
+          attrsCategory: item.attributes?.category,
+          attrsCategorySlug: item.attributes?.categorySlug,
+        })
+      }
+
+      meals.push(transformedMeal)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(`❌ [TRANSFORM] Failed to transform meal ${index + 1}:`, {
+        index,
+        itemId: item.id || item.documentId,
+        error: errorMessage,
+        item: {
+          id: item.id,
+          documentId: item.documentId,
+          hasAttributes: !!item.attributes,
+          attributeKeys: item.attributes ? Object.keys(item.attributes) : [],
+        },
+      })
+      failedMeals.push({ index, item, error: errorMessage })
+    }
+  })
+
+  console.log('📊 [TRANSFORM] Transformation complete:', {
+    locale,
+    totalFromStrapi: strapiResponse.data.length,
+    successfullyTransformed: meals.length,
+    failed: failedMeals.length,
+    failedMeals: failedMeals.map(fm => ({
+      index: fm.index,
+      id: fm.item.id || fm.item.documentId,
+      error: fm.error,
+    })),
+  })
+
+  return meals
 }
 
 /**

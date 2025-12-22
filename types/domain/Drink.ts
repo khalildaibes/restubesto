@@ -12,3 +12,4 @@ export interface Drink {
   available?: boolean // Whether the drink is in stock (defaults to true if not specified)
 }
 
+
