@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { LanguageProvider } from '@/features/language/components/LanguageProvider'
 import './globals.css'
+import { AccessibilityProvider } from '@/features/accessibility/components/AccessibilityProvider'
 
 export const metadata: Metadata = {
   title: 'מסעדת אלזיין - Restaurant Menu',
@@ -15,7 +16,17 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <body>
-        <LanguageProvider>{children}</LanguageProvider>
+        <a
+          href="#main-content"
+          className="skip-link"
+        >
+          Skip to main content
+        </a>
+        <LanguageProvider>
+          <AccessibilityProvider>
+            <div id="main-content">{children}</div>
+          </AccessibilityProvider>
+        </LanguageProvider>
       </body>
     </html>
   )

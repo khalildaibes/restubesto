@@ -8,6 +8,7 @@ import { IngredientsTab } from './components/IngredientsTab'
 import { CategoriesTab } from './components/CategoriesTab'
 import { LoginForm } from './components/LoginForm'
 import { LanguageSwitcher } from '@/features/language/components/LanguageSwitcher'
+import { AccessibilityMenu } from '@/features/accessibility/components'
 
 type Tab = 'orders' | 'meals' | 'drinks' | 'categories' | 'ingredients'
 
@@ -52,6 +53,7 @@ export default function AdminDashboard() {
           <div className="flex justify-between items-center py-6">
             <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
             <div className="flex items-center gap-4">
+              <AccessibilityMenu />
               <LanguageSwitcher />
               <button
                 onClick={handleLogout}
