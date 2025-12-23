@@ -65,6 +65,26 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ data: categoryData }),
     }, params)
     
+    console.log('📥 Strapi response:', {
+      hasData: !!data,
+      dataType: typeof data,
+      dataKeys: data ? Object.keys(data) : [],
+      hasDataData: !!data?.data,
+    })
+    
+    // Handle case where Strapi returns empty object or unexpected format
+    if (!data || typeof data !== 'object') {
+      console.warn('⚠️ Unexpected response format from Strapi')
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Failed to create category',
+          message: 'Unexpected response format from server'
+        },
+        { status: 500 }
+      )
+    }
+    
     console.log('✅ Category created successfully:', {
       categoryId: data.data?.id,
       documentId: data.data?.documentId,
@@ -73,7 +93,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: true, 
-        category: data.data,
+        category: data.data || data,
         message: 'Category created successfully' 
       },
       { status: 201 }
@@ -87,6 +107,7 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json(
       { 
+        success: false,
         error: 'Failed to create category', 
         message: errorMessage
       },

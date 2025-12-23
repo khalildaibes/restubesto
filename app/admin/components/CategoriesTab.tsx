@@ -77,6 +77,23 @@ export function CategoriesTab() {
 
   const handleSave = async (categoryData: Partial<Category>) => {
     try {
+      // Validate required fields
+      if (!categoryData.name || !categoryData.name.trim()) {
+        alert('Please enter a category name')
+        return
+      }
+
+      // Auto-generate slug if missing
+      let slug = categoryData.slug?.trim() || ''
+      if (!slug && categoryData.name) {
+        slug = generateSlug(categoryData.name)
+      }
+
+      if (!slug) {
+        alert('Please enter a category slug')
+        return
+      }
+
       let imageUrl = categoryData.imageUrl || ''
 
       // Upload image if a new file was selected
@@ -88,20 +105,38 @@ export function CategoriesTab() {
       }
 
       const payload = {
-        ...categoryData,
-        imageUrl,
+        name: categoryData.name.trim(),
+        slug: slug,
+        description: categoryData.description?.trim() || '',
+        imageUrl: imageUrl || null,
         locale: language,
       }
 
-      const url = editingCategory 
+      // Determine if we're creating or updating
+      const isUpdate = !isCreating && editingCategory && editingCategory.id
+      
+      // Validate that we have an ID when updating
+      if (!isCreating && (!editingCategory || !editingCategory.id)) {
+        console.error('❌ Cannot update category: missing ID or editingCategory', { 
+          isCreating,
+          editingCategory,
+          editingCategoryId: editingCategory?.id 
+        })
+        alert('Error: Category ID is missing. Please try again.')
+        return
+      }
+
+      const url = isUpdate
         ? `/api/admin/categories/${editingCategory.id}`
         : '/api/admin/categories'
       
-      const method = editingCategory ? 'PUT' : 'POST'
+      const method = isUpdate ? 'PUT' : 'POST'
 
       console.log('📤 Sending category data:', {
         url,
         method,
+        editingCategoryId: editingCategory?.id,
+        isCreating,
         payload,
       })
 
@@ -113,12 +148,40 @@ export function CategoriesTab() {
         body: JSON.stringify(payload),
       })
 
-      const result = await response.json()
       console.log('📥 Response:', {
         ok: response.ok,
         status: response.status,
-        result,
+        statusText: response.statusText,
+        contentType: response.headers.get('content-type'),
       })
+
+      // Check if response has content before parsing
+      const contentType = response.headers.get('content-type') || ''
+      let result: any = {}
+      
+      // Read response text once (can only read body once)
+      const responseText = await response.text()
+      
+      if (contentType.includes('application/json')) {
+        try {
+          if (responseText.trim()) {
+            result = JSON.parse(responseText)
+          } else {
+            console.warn('⚠️ Empty JSON response')
+            result = { error: 'Empty response from server' }
+          }
+        } catch (parseError) {
+          console.error('❌ Failed to parse JSON response:', parseError)
+          console.error('Response text:', responseText.substring(0, 200))
+          throw new Error(`Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
+        }
+      } else {
+        // If not JSON, use the text we already read
+        console.warn('⚠️ Non-JSON response:', responseText.substring(0, 200))
+        result = { error: `Unexpected response format: ${response.statusText}`, message: responseText }
+      }
+
+      console.log('📦 Parsed result:', result)
 
       if (response.ok && result.success) {
         await fetchCategories()
@@ -127,7 +190,7 @@ export function CategoriesTab() {
         setImageFile(null)
         setImagePreview('')
       } else {
-        const errorMessage = result.message || result.error || 'Unknown error'
+        const errorMessage = result.message || result.error || `Server error: ${response.status} ${response.statusText}`
         console.error('❌ Failed to save category:', errorMessage)
         alert(`Failed to save category: ${errorMessage}`)
       }

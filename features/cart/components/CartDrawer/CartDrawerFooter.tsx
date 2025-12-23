@@ -8,7 +8,11 @@ import { fetchMeals } from '@/lib/api-client'
 import { getText } from '@/shared/utils/i18n'
 import { useLanguageStore } from '@/stores/language'
 
-export function CartDrawerFooter() {
+interface CartDrawerFooterProps {
+  quickOrder?: boolean // Boolean parameter to control quick order mode, defaults to true
+}
+
+export function CartDrawerFooter({ quickOrder = true }: CartDrawerFooterProps) {
   const items = useCartStore((state) => state.items)
   const getSubtotal = useCartStore((state) => state.getSubtotal)
   const clearCart = useCartStore((state) => state.clearCart)
@@ -16,7 +20,6 @@ export function CartDrawerFooter() {
   const t = useTranslations()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showCheckoutForm, setShowCheckoutForm] = useState(false)
-  const [quickCheckout, setQuickCheckout] = useState(true) // Default to true - only phone required
   const [formData, setFormData] = useState({
     customerName: '',
     customerEmail: '',
@@ -31,15 +34,15 @@ export function CartDrawerFooter() {
   if (items.length === 0) return null
 
   const handleCheckout = async () => {
-    // Validation based on quickCheckout mode
-    if (quickCheckout) {
-      // Quick checkout: only phone is required
+    // Validation based on quickOrder mode
+    if (quickOrder) {
+      // Quick order: only phone is required
       if (!formData.customerPhone.trim()) {
         alert('Please enter your phone number')
         return
       }
     } else {
-      // Full checkout: name is required
+      // Full order: name is required
       if (!formData.customerName.trim()) {
         alert('Please enter your name')
         return
@@ -94,11 +97,11 @@ export function CartDrawerFooter() {
       })
 
       const subtotal = getSubtotal()
-      const deliveryFee = formData.deliveryMethod === 'delivery' ? (formData.deliveryFee || 10) : 0
+      const deliveryFee = quickOrder ? 0 : (formData.deliveryMethod === 'delivery' ? (formData.deliveryFee || 10) : 0)
       const total = subtotal + deliveryFee
 
-      // If quick checkout, use phone as name or generate a placeholder
-      const customerName = quickCheckout 
+      // If quick order, use phone as name or generate a placeholder
+      const customerName = quickOrder 
         ? (formData.customerName.trim() || `Customer ${formData.customerPhone}`)
         : formData.customerName
 
@@ -139,7 +142,6 @@ export function CartDrawerFooter() {
           deliveryMethod: 'pickup',
           deliveryFee: 0,
         })
-        setQuickCheckout(true) // Reset to quick checkout mode
       } else {
         alert(`Failed to create order: ${result.error || result.message || 'Unknown error'}`)
       }
@@ -155,51 +157,56 @@ export function CartDrawerFooter() {
     return (
       <div className="p-6 border-t border-gray-100 bg-white max-h-[60vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Checkout</h3>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={quickCheckout}
-              onChange={(e) => setQuickCheckout(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">Quick Checkout</span>
-          </label>
+          <h3 className="text-lg font-semibold text-gray-900">Save order</h3>
         </div>
         
         <div className="space-y-4">
-          {!quickCheckout && (
+          {quickOrder ? (
+            // Quick order mode: only phone number required
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name *
+                Phone *
               </label>
               <input
-                type="text"
-                required={!quickCheckout}
-                value={formData.customerName}
-                onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                type="tel"
+                required
+                value={formData.customerPhone}
+                onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Your name"
+                placeholder="+1234567890"
               />
             </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone {quickCheckout && '*'}
-            </label>
-            <input
-              type="tel"
-              required={quickCheckout}
-              value={formData.customerPhone}
-              onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="+1234567890"
-            />
-          </div>
-
-          {!quickCheckout && (
+          ) : (
+            // Full order mode: show all fields
             <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.customerName}
+                  onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Your name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={formData.customerPhone}
+                  onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="+1234567890"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Email
@@ -212,56 +219,52 @@ export function CartDrawerFooter() {
                   placeholder="your@email.com"
                 />
               </div>
-            </>
-          )}
 
-        {(!quickCheckout &&<div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Delivery Method
-            </label>
-            <select
-              value={formData.deliveryMethod}
-              onChange={(e) => setFormData({ ...formData, deliveryMethod: e.target.value as 'pickup' | 'delivery' })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="pickup">Pickup</option>
-              <option value="delivery">Delivery</option>
-            </select>
-          </div>)}
-
-          {!quickCheckout && formData.deliveryMethod === 'delivery' && (
-            <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Delivery Address
+                  Delivery Method
                 </label>
-                <textarea
-                  value={formData.customerAddress}
-                  onChange={(e) => setFormData({ ...formData, customerAddress: e.target.value })}
-                  rows={2}
+                <select
+                  value={formData.deliveryMethod}
+                  onChange={(e) => setFormData({ ...formData, deliveryMethod: e.target.value as 'pickup' | 'delivery' })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Your delivery address"
-                />
+                >
+                  <option value="pickup">Pickup</option>
+                  <option value="delivery">Delivery</option>
+                </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Delivery Fee (₪)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.deliveryFee}
-                  onChange={(e) => setFormData({ ...formData, deliveryFee: parseFloat(e.target.value) || 0 })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="10"
-                />
-              </div>
-            </>
-          )}
 
-          {!quickCheckout && (
-            <>
+              {formData.deliveryMethod === 'delivery' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Delivery Address
+                    </label>
+                    <textarea
+                      value={formData.customerAddress}
+                      onChange={(e) => setFormData({ ...formData, customerAddress: e.target.value })}
+                      rows={2}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Your delivery address"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Delivery Fee (₪)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.deliveryFee}
+                      onChange={(e) => setFormData({ ...formData, deliveryFee: parseFloat(e.target.value) || 0 })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="10"
+                    />
+                  </div>
+                </>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Payment Method
@@ -295,13 +298,13 @@ export function CartDrawerFooter() {
           <div className="flex items-center justify-between pt-2 border-t">
             <div>
               <div className="text-sm text-gray-600">Subtotal: ₪{getSubtotal().toFixed(2)}</div>
-              {formData.deliveryMethod === 'delivery' && (
+              {!quickOrder && formData.deliveryMethod === 'delivery' && (
                 <div className="text-sm text-gray-600">
                   Delivery: ₪{(formData.deliveryFee || 10).toFixed(2)}
                 </div>
               )}
               <div className="text-lg font-bold text-gray-900 mt-1">
-                Total: ₪{(getSubtotal() + (formData.deliveryMethod === 'delivery' ? (formData.deliveryFee || 10) : 0)).toFixed(2)}
+                Total: ₪{(getSubtotal() + (!quickOrder && formData.deliveryMethod === 'delivery' ? (formData.deliveryFee || 10) : 0)).toFixed(2)}
               </div>
             </div>
           </div>
@@ -309,10 +312,10 @@ export function CartDrawerFooter() {
           <div className="flex gap-2 pt-2">
             <Button
               onClick={handleCheckout}
-              disabled={isSubmitting || (quickCheckout ? !formData.customerPhone.trim() : !formData.customerName.trim())}
+              disabled={isSubmitting || (quickOrder ? !formData.customerPhone.trim() : !formData.customerName.trim())}
               className="flex-1 py-3"
             >
-              {isSubmitting ? 'Saving...' : 'Save'}
+              {isSubmitting ? 'Saving...' : 'Save order'}
             </Button>
             <Button
               onClick={() => setShowCheckoutForm(false)}
@@ -381,7 +384,7 @@ export function CartDrawerFooter() {
         onClick={handleCheckoutClick}
         className="w-full py-4 text-lg"
       >
-        {t.cart.checkout}
+        Save order
       </Button>
     </div>
   )

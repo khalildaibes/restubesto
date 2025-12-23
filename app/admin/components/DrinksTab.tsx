@@ -125,18 +125,43 @@ export function DrinksTab() {
         }
       }
 
+      // Note: slug and volume fields don't exist in Strapi drinks collection, so we exclude them
+      const { slug, volume, ...drinkDataWithoutInvalidFields } = drinkData
+      
       const payload = {
-        ...drinkData,
+        ...drinkDataWithoutInvalidFields,
         imageUrl,
         available: drinkData.available !== undefined ? drinkData.available : true,
         locale: language,
       }
 
-      const url = editingDrink 
+      // Determine if we're creating or updating
+      const isUpdate = !isCreating && editingDrink && editingDrink.id
+      
+      // Validate that we have an ID when updating
+      if (!isCreating && (!editingDrink || !editingDrink.id)) {
+        console.error('❌ Cannot update drink: missing ID or editingDrink', { 
+          isCreating,
+          editingDrink,
+          editingDrinkId: editingDrink?.id 
+        })
+        alert('Error: Drink ID is missing. Please try again.')
+        return
+      }
+
+      const url = isUpdate
         ? `/api/admin/drinks/${editingDrink.id}`
         : '/api/admin/drinks'
       
-      const method = editingDrink ? 'PUT' : 'POST'
+      const method = isUpdate ? 'PUT' : 'POST'
+
+      console.log('📤 Sending drink data:', {
+        url,
+        method,
+        editingDrinkId: editingDrink?.id,
+        isCreating,
+        payload,
+      })
 
       const response = await fetch(url, {
         method,
@@ -146,15 +171,51 @@ export function DrinksTab() {
         body: JSON.stringify(payload),
       })
 
-      if (response.ok) {
+      console.log('📥 Response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        contentType: response.headers.get('content-type'),
+      })
+
+      // Check if response has content before parsing
+      const contentType = response.headers.get('content-type') || ''
+      let result: any = {}
+      
+      // Read response text once (can only read body once)
+      const responseText = await response.text()
+      
+      if (contentType.includes('application/json')) {
+        try {
+          if (responseText.trim()) {
+            result = JSON.parse(responseText)
+          } else {
+            console.warn('⚠️ Empty JSON response')
+            result = { error: 'Empty response from server' }
+          }
+        } catch (parseError) {
+          console.error('❌ Failed to parse JSON response:', parseError)
+          console.error('Response text:', responseText.substring(0, 200))
+          throw new Error(`Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
+        }
+      } else {
+        // If not JSON, use the text we already read
+        console.warn('⚠️ Non-JSON response:', responseText.substring(0, 200))
+        result = { error: `Unexpected response format: ${response.statusText}`, message: responseText }
+      }
+
+      console.log('📦 Parsed result:', result)
+
+      if (response.ok && result.success) {
         await fetchDrinks()
         setEditingDrink(null)
         setIsCreating(false)
         setImageFile(null)
         setImagePreview('')
       } else {
-        const error = await response.json()
-        alert(`Failed to save drink: ${error.message || 'Unknown error'}`)
+        const errorMessage = result.message || result.error || `Server error: ${response.status} ${response.statusText}`
+        console.error('❌ Failed to save drink:', errorMessage)
+        alert(`Failed to save drink: ${errorMessage}`)
       }
     } catch (error) {
       console.error('Error saving drink:', error)

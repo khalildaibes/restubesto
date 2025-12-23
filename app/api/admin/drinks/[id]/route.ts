@@ -43,14 +43,13 @@ export async function PUT(
   try {
     const body = await request.json()
     
+    // Note: slug and volume fields don't exist in Strapi drinks collection
     const drinkData = {
       name: body.name,
-      slug: body.slug,
       description: body.description || '',
       categorySlug: body.categorySlug,
       price: body.price,
       calories: body.calories || null,
-      volume: body.volume || null,
       imageUrl: body.imageUrl || null,
       available: body.available !== undefined ? body.available : true,
       publishedAt: body.publishedAt || new Date().toISOString(),

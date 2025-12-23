@@ -6,16 +6,26 @@ import { MealsTab } from './components/MealsTab'
 import { DrinksTab } from './components/DrinksTab'
 import { IngredientsTab } from './components/IngredientsTab'
 import { CategoriesTab } from './components/CategoriesTab'
+import { CategoryMealsTab } from './components/CategoryMealsTab'
 import { LoginForm } from './components/LoginForm'
 import { LanguageSwitcher } from '@/features/language/components/LanguageSwitcher'
 import { AccessibilityMenu } from '@/features/accessibility/components'
+import { useLanguageStore } from '@/stores/language'
 
-type Tab = 'orders' | 'meals' | 'drinks' | 'categories' | 'ingredients'
+interface Category {
+  id: string
+  slug: string
+  name: string
+}
+
+type Tab = 'orders' | 'meals' | 'drinks' | 'categories' | 'ingredients' | `category:${string}`
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('orders')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [categories, setCategories] = useState<Category[]>([])
+  const { language } = useLanguageStore()
 
   useEffect(() => {
     // Check if user is authenticated on mount
@@ -23,6 +33,33 @@ export default function AdminDashboard() {
     setIsAuthenticated(authenticated)
     setIsLoading(false)
   }, [])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchCategories()
+    }
+  }, [isAuthenticated, language])
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch(`/api/admin/categories?locale=${language}`)
+      const data = await response.json()
+      if (data.data && Array.isArray(data.data)) {
+        const categoriesList = data.data.map((item: any) => {
+          const attrs = item.attributes || item
+          const documentId = item.documentId || item.id
+          return {
+            id: String(documentId),
+            slug: attrs.slug || '',
+            name: attrs.name || '',
+          }
+        })
+        setCategories(categoriesList)
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
 
   const handleLogin = () => {
     setIsAuthenticated(true)
@@ -66,7 +103,7 @@ export default function AdminDashboard() {
           
           {/* Tabs */}
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="-mb-px flex space-x-8 overflow-x-auto">
               <button
                 onClick={() => setActiveTab('orders')}
                 className={`${
@@ -117,6 +154,20 @@ export default function AdminDashboard() {
               >
                 Ingredients
               </button>
+              {/* Dynamic category tabs */}
+              {categories.map((category) => (
+                <button
+                  key={category.slug}
+                  onClick={() => setActiveTab(`category:${category.slug}` as Tab)}
+                  className={`${
+                    activeTab === `category:${category.slug}`
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                >
+                  {category.name}
+                </button>
+              ))}
             </nav>
           </div>
         </div>
@@ -129,6 +180,16 @@ export default function AdminDashboard() {
         {activeTab === 'drinks' && <DrinksTab />}
         {activeTab === 'categories' && <CategoriesTab />}
         {activeTab === 'ingredients' && <IngredientsTab />}
+        {activeTab.startsWith('category:') && (() => {
+          const categorySlug = activeTab.replace('category:', '')
+          const category = categories.find((cat) => cat.slug === categorySlug)
+          return category ? (
+            <CategoryMealsTab
+              categorySlug={categorySlug}
+              categoryName={category.name}
+            />
+          ) : null
+        })()}
       </div>
     </div>
   )

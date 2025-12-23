@@ -29,7 +29,12 @@ interface Ingredient {
   isDefault: boolean
 }
 
-export function MealsTab() {
+interface MealsTabProps {
+  categorySlug?: string
+  categoryName?: string
+}
+
+export function MealsTab({ categorySlug, categoryName }: MealsTabProps = {}) {
   const { language } = useLanguageStore()
   const [meals, setMeals] = useState<Meal[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -39,6 +44,9 @@ export function MealsTab() {
   const [isCreating, setIsCreating] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string>('')
+  const [sortMode, setSortMode] = useState<'default' | 'category' | `cat:${string}`>(
+    categorySlug ? `cat:${categorySlug}` : 'default'
+  )
 
   useEffect(() => {
     fetchMeals()
@@ -395,12 +403,44 @@ export function MealsTab() {
     return <div className="text-center py-12">Loading meals...</div>
   }
 
+  const categoryNameMap = categories.reduce<Record<string, string>>((acc, cat) => {
+    acc[cat.slug] = cat.name
+    return acc
+  }, {})
+
+  // Filter meals by category if categorySlug is provided
+  const baseMeals = categorySlug
+    ? meals.filter((meal) => meal.categorySlug === categorySlug)
+    : meals
+
+  const displayedMeals =
+    categorySlug
+      ? [...baseMeals].sort((a, b) => a.name.localeCompare(b.name))
+      : sortMode === 'category'
+        ? [...meals].sort((a, b) => {
+            const aCat = categoryNameMap[a.categorySlug] || ''
+            const bCat = categoryNameMap[b.categorySlug] || ''
+            if (aCat === bCat) return a.name.localeCompare(b.name)
+            return aCat.localeCompare(bCat)
+          })
+        : sortMode.startsWith('cat:')
+          ? meals
+              .filter((meal) => meal.categorySlug === sortMode.replace('cat:', ''))
+              .sort((a, b) => a.name.localeCompare(b.name))
+          : meals
+
   return (
     <div>
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Meals Management</h2>
-          <p className="text-gray-600 mt-1">Create, update, and manage meals</p>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {categoryName ? `${categoryName} - Meals` : 'Meals Management'}
+          </h2>
+          <p className="text-gray-600 mt-1">
+            {categoryName
+              ? `Manage meals in ${categoryName} category`
+              : 'Create, update, and manage meals'}
+          </p>
         </div>
         <button
           onClick={() => {
@@ -425,8 +465,31 @@ export function MealsTab() {
         </button>
       </div>
 
+      {!categorySlug && (
+        <div className="mb-4 flex items-center gap-3">
+          <label className="text-sm font-medium text-gray-700">Sort</label>
+          <select
+            value={sortMode}
+            onChange={(e) =>
+              setSortMode(
+                e.target.value as 'default' | 'category' | `cat:${string}`
+              )
+            }
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+          >
+            <option value="default">Default order</option>
+            <option value="category">Category (A → Z)</option>
+            {categories.map((cat) => (
+              <option key={cat.slug} value={`cat:${cat.slug}`}>
+                {`Category: ${cat.name}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {meals.map((meal) => (
+        {displayedMeals.map((meal) => (
           <div key={meal.id} className="bg-white rounded-lg shadow overflow-hidden">
             {meal.imageUrl && (
               <img

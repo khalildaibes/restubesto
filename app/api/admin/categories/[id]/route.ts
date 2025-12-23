@@ -72,20 +72,46 @@ export async function PUT(
       body: JSON.stringify({ data: categoryData }),
     }, queryParams)
     
+    console.log('📥 Strapi response:', {
+      hasData: !!data,
+      dataType: typeof data,
+      dataKeys: data ? Object.keys(data) : [],
+      hasDataData: !!data?.data,
+    })
+    
+    // Handle case where Strapi returns empty object or unexpected format
+    if (!data || typeof data !== 'object') {
+      console.warn('⚠️ Unexpected response format from Strapi, returning success anyway')
+      return NextResponse.json(
+        { 
+          success: true, 
+          category: null,
+          message: 'Category updated successfully (response format unexpected)' 
+        },
+        { status: 200 }
+      )
+    }
+    
     return NextResponse.json(
       { 
         success: true, 
-        category: data.data,
+        category: data.data || data,
         message: 'Category updated successfully' 
       },
       { status: 200 }
     )
   } catch (error) {
     console.error('Error updating category:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Error details:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    })
     return NextResponse.json(
       { 
+        success: false,
         error: 'Failed to update category', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
+        message: errorMessage 
       },
       { status: 500 }
     )
