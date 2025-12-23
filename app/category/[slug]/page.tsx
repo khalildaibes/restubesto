@@ -46,7 +46,9 @@ export default function CategoryPage({
       }
       
       setCategory(categoryData)
-      setCategoryMeals(mealsData)
+      // Filter out meals where available is false
+      const availableMeals = mealsData.filter(meal => meal.available !== false)
+      setCategoryMeals(availableMeals)
       setCategoryDrinks(drinksData)
       setLoading(false)
     }

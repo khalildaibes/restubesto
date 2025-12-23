@@ -271,12 +271,34 @@ export function MealsTab() {
         body: JSON.stringify(payload),
       })
 
-      const result = await response.json()
       console.log('📥 Response:', {
         ok: response.ok,
         status: response.status,
-        result,
+        statusText: response.statusText,
+        contentType: response.headers.get('content-type'),
       })
+
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type') || ''
+      let result: any = {}
+      
+      if (contentType.includes('application/json')) {
+        try {
+          result = await response.json()
+        } catch (parseError) {
+          console.error('❌ Failed to parse JSON response:', parseError)
+          const text = await response.text()
+          console.error('Response text:', text.substring(0, 200))
+          throw new Error(`Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
+        }
+      } else {
+        // If not JSON, try to get text
+        const text = await response.text()
+        console.warn('⚠️ Non-JSON response:', text.substring(0, 200))
+        throw new Error(`Unexpected response format: ${response.statusText}`)
+      }
+
+      console.log('📦 Parsed result:', result)
 
       if (response.ok && result.success) {
         await fetchMeals()
@@ -285,7 +307,7 @@ export function MealsTab() {
         setImageFile(null)
         setImagePreview('')
       } else {
-        const errorMessage = result.message || result.error || 'Unknown error'
+        const errorMessage = result.message || result.error || `Server error: ${response.status} ${response.statusText}`
         console.error('❌ Failed to save meal:', errorMessage)
         alert(`Failed to save meal: ${errorMessage}`)
       }
@@ -296,41 +318,64 @@ export function MealsTab() {
     }
   }
 
-  const handleDelete = async (mealId: string) => {
-    if (!confirm('Are you sure you want to delete this meal?')) return
+  const handleToggleAvailable = async (meal: Meal) => {
+    const newAvailableStatus = !(meal.available !== false)
+    const action = newAvailableStatus ? 'make available' : 'make unavailable'
+    
+    if (!confirm(`Are you sure you want to ${action} this meal?`)) return
 
     try {
-      console.log('🗑️ Deleting meal:', mealId)
-      const response = await fetch(`/api/admin/meals/${mealId}`, {
-        method: 'DELETE',
+      console.log(`🔄 Toggling available status for meal:`, {
+        mealId: meal.id,
+        currentAvailable: meal.available,
+        newAvailable: newAvailableStatus,
       })
 
-      console.log('📥 Delete response:', {
-        status: response.status,
-        ok: response.ok,
-        statusText: response.statusText,
+      const payload = {
+        name: meal.name,
+        description: meal.description,
+        price: meal.price,
+        calories: meal.calories,
+        categorySlug: meal.categorySlug,
+        imageUrl: meal.imageUrl,
+        available: newAvailableStatus,
+        locale: language,
+        ingredients: meal.ingredients || [],
+        tags: meal.tags || [],
+      }
+
+      const response = await fetch(`/api/admin/meals/${meal.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       })
 
       const data = await response.json()
-      console.log('📦 Delete response data:', data)
+      console.log('📥 Toggle response:', {
+        status: response.status,
+        ok: response.ok,
+        data,
+      })
 
       if (response.ok && data.success) {
-        console.log('✅ Meal deleted successfully, refreshing list...')
+        console.log(`✅ Meal ${action} successfully, refreshing list...`)
         await fetchMeals()
       } else {
-        const errorMessage = data.message || data.error || 'Failed to delete meal'
-        console.error('❌ Delete failed:', {
+        const errorMessage = data.message || data.error || `Failed to ${action} meal`
+        console.error('❌ Toggle failed:', {
           status: response.status,
           ok: response.ok,
           data,
           errorMessage,
         })
-        alert(`Failed to delete meal: ${errorMessage}`)
+        alert(`Failed to ${action} meal: ${errorMessage}`)
       }
     } catch (error) {
-      console.error('❌ Error deleting meal:', error)
+      console.error('❌ Error toggling meal availability:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      alert(`Failed to delete meal: ${errorMessage}`)
+      alert(`Failed to ${action} meal: ${errorMessage}`)
     }
   }
 
@@ -424,10 +469,15 @@ export function MealsTab() {
                   Edit
                 </button>
                 <button
-                  onClick={() => handleDelete(meal.id)}
-                  className="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700"
+                  onClick={() => handleToggleAvailable(meal)}
+                  className={`px-3 py-2 text-white text-sm rounded-md ${
+                    meal.available !== false
+                      ? 'bg-orange-600 hover:bg-orange-700'
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                  title={meal.available !== false ? 'Mark as unavailable' : 'Mark as available'}
                 >
-                  Delete
+                  {meal.available !== false ? 'Unavailable' : 'Available'}
                 </button>
               </div>
             </div>
