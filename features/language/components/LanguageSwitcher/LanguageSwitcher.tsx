@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLanguageStore } from '@/stores/language'
 import type { Language } from '@/types/i18n'
@@ -9,7 +9,6 @@ import { ChevronIcon } from '@/shared/components/ui/ChevronIcon'
 import { CheckIcon } from '@/shared/components/ui/CheckIcon'
 
 const languages: { code: Language; native: string }[] = [
-  { code: 'en', native: 'English' },
   { code: 'he', native: 'עברית' },
   { code: 'ar', native: 'العربية' },
 ]
@@ -17,7 +16,17 @@ const languages: { code: Language; native: string }[] = [
 export function LanguageSwitcher() {
   const { language, setLanguage, direction } = useLanguageStore()
   const [isOpen, setIsOpen] = useState(false)
-  const currentLang = languages.find((l) => l.code === language) || languages[0]
+  
+  // Migrate from English to Hebrew if needed
+  useEffect(() => {
+    if (language === 'en') {
+      setLanguage('he')
+    }
+  }, [language, setLanguage])
+  
+  // If saved language is English (removed), default to Hebrew
+  const currentLanguage = language === 'en' ? 'he' : language
+  const currentLang = languages.find((l) => l.code === currentLanguage) || languages[0]
 
   return (
     <div className="relative">
@@ -55,14 +64,14 @@ export function LanguageSwitcher() {
                     setIsOpen(false)
                   }}
                   className={`w-full px-4 py-2 text-start hover:bg-gray-50 transition-colors text-sm ${
-                    language === lang.code
+                    currentLanguage === lang.code
                       ? 'bg-gray-50 font-semibold text-gray-900'
                       : 'text-gray-700'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span>{lang.native}</span>
-                    {language === lang.code && (
+                    {currentLanguage === lang.code && (
                       <CheckIcon className="w-4 h-4 text-gray-900" />
                     )}
                   </div>

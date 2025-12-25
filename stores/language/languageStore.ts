@@ -7,8 +7,8 @@ import type { LanguageStore } from './types'
 export const useLanguageStore = create<LanguageStore>()(
   persist(
     (set, get) => ({
-      language: 'en',
-      direction: 'ltr',
+      language: 'he',
+      direction: 'rtl',
       setLanguage: (lang: Language) => {
         const newDirection = getDirection(lang)
         set({ language: lang, direction: newDirection })

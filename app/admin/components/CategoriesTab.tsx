@@ -31,18 +31,20 @@ export function CategoriesTab() {
       const data = await response.json()
       
       if (data.data && Array.isArray(data.data)) {
-        const categoriesList = data.data.map((item: any) => {
-          const attrs = item.attributes || item
-          // Use documentId if available (Strapi v5 i18n), otherwise use id
-          const documentId = item.documentId || item.id
-          return {
-            id: String(documentId),
-            name: attrs.name || '',
-            slug: attrs.slug || '',
-            description: attrs.description || '',
-            imageUrl: attrs.imageUrl || '',
-          }
-        })
+        const categoriesList = data.data
+          .map((item: any) => {
+            const attrs = item.attributes || item
+            // Use documentId if available (Strapi v5 i18n), otherwise use id
+            const documentId = item.documentId || item.id
+            return {
+              id: String(documentId),
+              name: attrs.name || '',
+              slug: attrs.slug || '',
+              description: attrs.description || '',
+              imageUrl: attrs.imageUrl || '',
+            }
+          })
+           // Filter out drinks category
         setCategories(categoriesList)
       }
     } catch (error) {

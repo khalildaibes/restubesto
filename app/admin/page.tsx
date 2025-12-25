@@ -155,7 +155,7 @@ export default function AdminDashboard() {
                 Ingredients
               </button>
               {/* Dynamic category tabs */}
-              {categories.map((category) => (
+              {categories.filter((category: Category) => category.slug !== 'drinks').map((category) => (
                 <button
                   key={category.slug}
                   onClick={() => setActiveTab(`category:${category.slug}` as Tab)}
