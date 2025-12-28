@@ -23,3 +23,5 @@ export function AccessibilityProvider({ children }: AccessibilityProviderProps) 
   return <>{children}</>
 }
 
+
+

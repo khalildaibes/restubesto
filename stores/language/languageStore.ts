@@ -1,8 +1,21 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Language } from '@/types/i18n'
 import { getDirection } from '@/shared/utils/i18n/getDirection'
 import type { LanguageStore } from './types'
+
+// Create a safe storage adapter that works in both client and server environments
+const getStorage = () => {
+  if (typeof window === 'undefined') {
+    // Return a no-op storage for server-side rendering
+    return {
+      getItem: () => null,
+      setItem: () => {},
+      removeItem: () => {},
+    }
+  }
+  return localStorage
+}
 
 export const useLanguageStore = create<LanguageStore>()(
   persist(
@@ -21,6 +34,7 @@ export const useLanguageStore = create<LanguageStore>()(
     }),
     {
       name: 'language-storage',
+      storage: createJSONStorage(() => getStorage()),
       onRehydrateStorage: () => (state) => {
         if (state && typeof document !== 'undefined') {
           document.documentElement.dir = state.direction

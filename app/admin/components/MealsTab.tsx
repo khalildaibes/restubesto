@@ -254,11 +254,14 @@ export function MealsTab({ categorySlug, categoryName }: MealsTabProps = {}) {
       payload.tags = mealData.tags
     }
 
-      const url = editingMeal 
+      // Check if we're editing an existing meal (has a valid ID) or creating a new one
+      const isEditing = editingMeal && editingMeal.id && editingMeal.id.trim() !== ''
+      
+      const url = isEditing
         ? `/api/admin/meals/${editingMeal.id}`
         : '/api/admin/meals'
       
-      const method = editingMeal ? 'PUT' : 'POST'
+      const method = isEditing ? 'PUT' : 'POST'
 
       console.log('📤 Sending meal data to API:', {
         url,

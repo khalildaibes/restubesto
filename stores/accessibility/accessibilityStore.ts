@@ -1,8 +1,21 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type { AccessibilityStore, FontScale } from './types'
 
 const storageKey = 'accessibility-preferences'
+
+// Create a safe storage adapter that works in both client and server environments
+const getStorage = () => {
+  if (typeof window === 'undefined') {
+    // Return a no-op storage for server-side rendering
+    return {
+      getItem: () => null,
+      setItem: () => {},
+      removeItem: () => {},
+    }
+  }
+  return localStorage
+}
 
 const applyDocumentClasses = (state: AccessibilityStore) => {
   if (typeof document === 'undefined') return
@@ -41,6 +54,7 @@ export const useAccessibilityStore = create<AccessibilityStore>()(
     }),
     {
       name: storageKey,
+      storage: createJSONStorage(() => getStorage()),
       onRehydrateStorage: () => (state) => {
         if (state) {
           applyDocumentClasses(state as AccessibilityStore)
@@ -49,4 +63,6 @@ export const useAccessibilityStore = create<AccessibilityStore>()(
     }
   )
 )
+
+
 
