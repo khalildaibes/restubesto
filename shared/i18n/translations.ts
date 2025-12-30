@@ -13,6 +13,7 @@ export const translations = {
     },
     home: {
       categories: 'Categories',
+      vegetarianNote: 'Vegetarian diner (without a main dish) 60 NIS on salads\nDiner with a main dish gets free salad',
     },
     cart: {
       cart: 'Cart',
@@ -27,6 +28,9 @@ export const translations = {
       defaultIngredients: 'Ingredients',
       optionalIngredients: 'Add-ons',
       remove: 'Remove',
+      free: 'Free',
+      includedInMeal: 'Included in meal',
+      includedInSalads: 'Included in salads per person',
     },
   },
   he: {
@@ -43,6 +47,7 @@ export const translations = {
     },
     home: {
       categories: 'קטגוריות',
+      vegetarianNote: 'סועד צמחוני ( ללא מנה ) 60 שח על סלטים\nסועד עם מנה סלט חינמי',
     },
     cart: {
       cart: 'עגלה',
@@ -57,6 +62,9 @@ export const translations = {
       defaultIngredients: 'מרכיבים',
       optionalIngredients: 'תוספות',
       remove: 'הסר',
+      free: 'חינם',
+      includedInMeal: 'כלול במנה',
+      includedInSalads: 'כלול בסלטים לאדם',
     },
   },
   ar: {
@@ -73,6 +81,7 @@ export const translations = {
     },
     home: {
       categories: 'الفئات',
+      vegetarianNote: 'زبون نباتي ( بدون طبق رئيسي ) 60 شيكل على السلطات\nزبون مع طبق رئيسي يحصل على سلطة مجانية',
     },
     cart: {
       cart: 'السلة',
@@ -87,6 +96,9 @@ export const translations = {
       defaultIngredients: 'المكونات',
       optionalIngredients: 'الإضافات',
       remove: 'إزالة',
+      free: 'مجاني',
+      includedInMeal: 'مشمول في الوجبة',
+      includedInSalads: 'مشمول في السلطات للشخص',
     },
   },
 } as const

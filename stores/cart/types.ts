@@ -15,5 +15,6 @@ export interface CartItem {
   imageUrl: string
   qty: number
   selectedIngredients?: CartItemIngredient[] // Only for meals
+  categorySlug?: string // For meals - to identify salads
 }
 
