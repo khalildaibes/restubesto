@@ -48,7 +48,23 @@ export default function CategoryPage({
       setCategory(categoryData)
       // Filter out meals where available is false
       const availableMeals = mealsData.filter(meal => meal.available !== false)
-      setCategoryMeals(availableMeals)
+      
+      // Sort salads: free ones (price = 0) first, then paid ones
+      const isSaladsCategory = categoryData.slug?.toLowerCase() === 'salads' || 
+                               categoryData.slug?.toLowerCase() === 'salad' ||
+                               categoryData.slug?.toLowerCase().includes('salad')
+      
+      const sortedMeals = isSaladsCategory
+        ? [...availableMeals].sort((a, b) => {
+            // Free items (price = 0) come first
+            if (a.price === 0 && b.price !== 0) return -1
+            if (a.price !== 0 && b.price === 0) return 1
+            // If both are free or both are paid, sort by name
+            return getText(a.name, language).localeCompare(getText(b.name, language))
+          })
+        : availableMeals
+      
+      setCategoryMeals(sortedMeals)
       setCategoryDrinks(drinksData)
       setLoading(false)
     }
